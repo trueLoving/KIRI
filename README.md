@@ -1,7 +1,75 @@
-# Tauri + React + Typescript
+# 刻 | KIRI
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+> 禅意与锋利的平衡 - 极简番茄闹钟
 
-## Recommended IDE Setup
+## 项目理念
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+"刻"代表时间的精确切割，"KIRI"在日语中意为"切割"，体现了禅学中"当下"的概念。这个番茄闹钟应用追求极简、宁静的设计美学，帮助用户在专注与休息之间找到平衡。
+
+## 跨平台支持
+
+- 🌐 **Web版本** - 现代浏览器支持
+- 🤖 **Android** - 原生移动应用
+- 🍎 **iOS** - 原生移动应用
+- 📱 **响应式设计** - 适配各种屏幕尺寸
+
+## 设计特色
+
+- **极简美学**：纯净的界面设计，去除一切不必要的元素
+- **禅学理念**：体现"空"与"静"的哲学思想
+- **专注体验**：减少干扰，让用户专注于当下
+- **响应式设计**：适配各种设备尺寸
+
+## 功能特性
+
+### 核心功能
+- ⏰ 25分钟工作计时
+- ☕ 5分钟短休息
+- 🌸 15分钟长休息
+- 📊 圆形进度条显示
+- 🔄 自动模式切换
+
+### 交互体验
+- ⌨️ 键盘快捷键支持
+- 🔔 桌面通知提醒
+- 🎵 温和音效反馈
+- 📱 移动端适配
+
+### 键盘快捷键
+- `空格键` - 开始/暂停
+- `R键` - 重置计时器
+- `1键` - 切换到工作模式
+- `2键` - 切换到短休息模式
+- `3键` - 切换到长休息模式
+
+## 设计哲学
+
+### 禅学元素
+- **空**：留白设计，给思维留出空间
+- **静**：温和的色彩和音效，营造宁静氛围
+- **当下**：专注于当前时刻，不被过去未来干扰
+- **平衡**：工作与休息的和谐统一
+
+### 色彩理念
+- 主色调：深蓝灰 (#2c3e50) - 代表专注与深度
+- 辅助色：浅灰 (#7f8c8d) - 代表平静与安宁
+- 背景：渐变灰白 - 营造柔和氛围
+
+## 浏览器支持
+
+- Chrome 60+
+- Firefox 55+
+- Safari 12+
+- Edge 79+
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request 来改进这个项目。
+
+---
+
+*"时间不是敌人，而是朋友。每一刻都是新的开始。"*
