@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "刻 | KIRI - 番茄闹钟",
+  "version": "0.1.0",
+  "description": "禅意与锋利的平衡 - 极简番茄闹钟",
+  "permissions": [
+    "notifications",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "刻 | KIRI",
+    "default_icon": {
+      "16": "icons/16x16.png",
+      "32": "icons/32x32.png",
+      "48": "icons/48x48.png",
+      "128": "icons/128x128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "16": "icons/16x16.png",
+    "32": "icons/32x32.png",
+    "48": "icons/48x48.png",
+    "128": "icons/128x128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

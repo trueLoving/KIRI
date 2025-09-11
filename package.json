@@ -1,26 +1,74 @@
 {
-  "name": "KILI",
+  "name": "kiri-pomodoro",
   "private": true,
   "version": "0.1.0",
+  "description": "刻 | KIRI - 禅意与锋利的平衡，极简番茄闹钟",
   "type": "module",
+  "keywords": [
+    "pomodoro",
+    "timer",
+    "productivity",
+    "pwa",
+    "chrome-extension",
+    "tauri",
+    "react",
+    "typescript"
+  ],
+  "author": "KIRI Team",
+  "license": "MIT",
+  "homepage": "https://github.com/your-username/kiri-pomodoro",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/kiri-pomodoro.git"
+  },
   "scripts": {
     "dev": "vite",
+    "dev:web": "BUILD_TARGET=web-app vite",
+    "dev:chrome": "BUILD_TARGET=chrome-extension vite",
+    "dev:tauri": "tauri dev",
     "build": "tsc && vite build",
+    "build:web": "BUILD_TARGET=web-app tsc && vite build",
+    "build:chrome": "BUILD_TARGET=chrome-extension tsc && vite build",
+    "build:tauri": "tauri build",
+    "build:all": "npm run build:web && npm run build:chrome && npm run build:tauri",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "preview:web": "vite preview --outDir dist-web",
+    "preview:chrome": "vite preview --outDir dist-chrome",
+    "tauri": "tauri",
+    "clean": "rm -rf dist dist-web dist-chrome src-tauri/target",
+    "type-check": "tsc --noEmit",
+    "lint": "echo 'Linting not configured yet'",
+    "test": "echo 'Tests not configured yet'"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
     "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2"
+    "@tauri-apps/plugin-opener": "^2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@types/chrome": "^0.1.9",
+    "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4",
-    "@tauri-apps/cli": "^2"
+    "vite": "^7.0.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
