@@ -13,6 +13,10 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   FLUTTER_VERSION: '3.35.3'
 
@@ -109,6 +113,17 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
 
+      - name: List downloaded artifacts
+        run: |
+          echo "=== 下载的 artifacts 结构 ==="
+          find . -type f -name "*.apk" -o -name "*.app" -o -name "*.exe" -o -name "*.deb" -o -name "*.tar.gz" | head -20
+          echo "=== 各平台文件 ==="
+          ls -la android-apk/ 2>/dev/null || echo "Android APK 不存在"
+          ls -la web-app/ 2>/dev/null || echo "Web 应用不存在"
+          ls -la macos-app/ 2>/dev/null || echo "macOS 应用不存在"
+          ls -la windows-app/ 2>/dev/null || echo "Windows 应用不存在"
+          ls -la linux-app/ 2>/dev/null || echo "Linux 应用不存在"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -154,10 +169,14 @@ jobs:
           files: |
             android-apk/app-release.apk
             web-app/*
-            macos-app/*
-            windows-app/*
+            macos-app/*.app
+            macos-app/*.dmg
+            windows-app/*.exe
+            windows-app/*.msi
             linux-app/*
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
+          fail_on_unmatched_files: false
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
