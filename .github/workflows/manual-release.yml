@@ -1,0 +1,163 @@
+name: 应用构建
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  FLUTTER_VERSION: '3.35.3'
+
+jobs:
+  # 构建所有平台
+  build-all:
+    name: Build All Platforms
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: android
+            artifact: android-apk
+            path: build/app/outputs/flutter-apk/app-release.apk
+          - os: ubuntu-latest
+            platform: web
+            artifact: web-app
+            path: build/web
+          - os: macos-latest
+            platform: macos
+            artifact: macos-app
+            path: build/macos/Build/Products/Release
+          - os: windows-latest
+            platform: windows
+            artifact: windows-app
+            path: build/windows/runner/Release
+          - os: ubuntu-latest
+            platform: linux
+            artifact: linux-app
+            path: build/linux/x64/release/bundle
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java (Android only)
+        if: matrix.platform == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Build Android
+        if: matrix.platform == 'android'
+        run: flutter build apk --release
+
+      - name: Build Web
+        if: matrix.platform == 'web'
+        run: flutter build web --release
+
+      - name: Build macOS
+        if: matrix.platform == 'macos'
+        run: flutter build macos --release
+
+      - name: Build Windows
+        if: matrix.platform == 'windows'
+        run: flutter build windows --release
+
+      - name: Build Linux
+        if: matrix.platform == 'linux'
+        run: flutter build linux --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+
+  # 创建GitHub Release
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-all
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: 番茄闹钟 ${{ github.event.inputs.version }}
+          body: |
+            ## 🎉 番茄闹钟 ${{ github.event.inputs.version }}
+            
+            ### ✨ 功能特性
+            - 禅意极简设计
+            - 可自定义工作时间和休息时间
+            - 跨平台支持
+            - 直观的进度指示器
+            - 智能状态切换
+            
+            ### 📦 下载
+            - **Android APK**: 适用于Android设备
+            - **Web应用**: 可在浏览器中直接使用
+            - **macOS应用**: 适用于macOS系统
+            - **Windows应用**: 适用于Windows系统
+            - **Linux应用**: 适用于Linux系统
+            
+            ### 🚀 安装说明
+            1. **Android**: 下载APK文件并安装
+            2. **Web**: 访问在线版本或下载Web应用
+            3. **桌面**: 下载对应平台的安装包
+            
+            ### 📱 系统要求
+            - **Android**: 5.0+ (API 21+)
+            - **Web**: Chrome 60+, Firefox 55+, Safari 12+, Edge 79+
+            - **macOS**: 10.14+
+            - **Windows**: Windows 10+
+            - **Linux**: Ubuntu 18.04+
+            
+            ### 🔧 技术栈
+            - Flutter 3.35.3
+            - Dart 3.0
+            - Material Design 3
+            
+            ---
+            
+            *"时间不是敌人，而是朋友。每一刻都是新的开始。"*
+          files: |
+            android-apk/app-release.apk
+            web-app/*
+            macos-app/*
+            windows-app/*
+            linux-app/*
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
