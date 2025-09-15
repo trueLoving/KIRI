@@ -37,6 +37,10 @@ jobs:
             artifact: web-app
             path: build/web
           - os: macos-latest
+            platform: ios
+            artifact: ios-app
+            path: build/ios/iphoneos/Runner.app
+          - os: macos-latest
             platform: macos
             artifact: macos-app
             path: build/macos/Build/Products/Release
@@ -74,6 +78,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          # 安装 GStreamer 依赖（audioplayers 插件需要）
+          sudo apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+          # 安装其他可能需要的音频依赖
+          sudo apt-get install -y libasound2-dev libpulse-dev
 
       - name: Build Android
         if: matrix.platform == 'android'
@@ -82,6 +90,10 @@ jobs:
       - name: Build Web
         if: matrix.platform == 'web'
         run: flutter build web --release
+
+      - name: Build iOS
+        if: matrix.platform == 'ios'
+        run: flutter build ios --release --no-codesign
 
       - name: Build macOS
         if: matrix.platform == 'macos'
@@ -149,6 +161,17 @@ jobs:
                 echo "✅ 创建 Web 压缩包: kiri-${VERSION}-web.zip"
               fi
               ;;
+            "ios")
+              if [ -d "${{ matrix.path }}" ]; then
+                # 确保 artifacts 目录存在
+                mkdir -p artifacts
+                # 创建 iOS 应用的压缩包
+                cd "${{ matrix.path }}"
+                zip -r "../../artifacts/kiri-${VERSION}-ios.zip" .
+                cd ../..
+                echo "✅ 创建 iOS 应用: kiri-${VERSION}-ios.zip"
+              fi
+              ;;
             "macos")
               if [ -d "${{ matrix.path }}" ]; then
                 # 确保 artifacts 目录存在
@@ -210,6 +233,8 @@ jobs:
                 fi
                 # 如果没有找到单个文件，创建整个目录的压缩包
                 if [ -z "$APPIMAGE_FILE" ] && [ -z "$DEB_FILE" ]; then
+                  # 确保 artifacts 目录存在（在 cd 之前再次确认）
+                  mkdir -p ../../artifacts
                   cd "${{ matrix.path }}"
                   tar -czf "../../artifacts/kiri-${VERSION}-linux.tar.gz" .
                   cd ../..
@@ -248,6 +273,7 @@ jobs:
           echo "=== 各平台文件 ==="
           ls -la android-apk/ 2>/dev/null || echo "Android APK 不存在"
           ls -la web-app/ 2>/dev/null || echo "Web 应用不存在"
+          ls -la ios-app/ 2>/dev/null || echo "iOS 应用不存在"
           ls -la macos-app/ 2>/dev/null || echo "macOS 应用不存在"
           ls -la windows-app/ 2>/dev/null || echo "Windows 应用不存在"
           ls -la linux-app/ 2>/dev/null || echo "Linux 应用不存在"
@@ -280,6 +306,13 @@ jobs:
             FILE_LIST="$FILE_LIST
             web-app/kiri-${VERSION}-web.zip"
             echo "✅ 添加 Web 应用: kiri-${VERSION}-web.zip"
+          fi
+          
+          # iOS 应用
+          if [ -f "ios-app/kiri-${VERSION}-ios.zip" ]; then
+            FILE_LIST="$FILE_LIST
+            ios-app/kiri-${VERSION}-ios.zip"
+            echo "✅ 添加 iOS 应用: kiri-${VERSION}-ios.zip"
           fi
           
           # macOS 应用
@@ -354,6 +387,7 @@ jobs:
             ### 📦 下载
             - **Android APK**: `kiri-${VERSION}.apk` - 适用于Android设备
             - **Web应用**: `kiri-${VERSION}-web.zip` - 包含HTML资源的压缩包
+            - **iOS应用**: `kiri-${VERSION}-ios.zip` - 适用于iOS设备（需要开发者证书）
             - **macOS应用**: `kiri-${VERSION}.app` 或 `kiri-${VERSION}.dmg` - 适用于macOS系统
             - **Windows应用**: `kiri-${VERSION}.exe` 或 `kiri-${VERSION}.msi` - 适用于Windows系统
             - **Linux应用**: `kiri-${VERSION}.AppImage` 或 `kiri-${VERSION}.deb` - 适用于Linux系统
@@ -361,13 +395,15 @@ jobs:
             ### 🚀 安装说明
             1. **Android**: 下载 `kiri-${VERSION}.apk` 文件并安装
             2. **Web**: 下载 `kiri-${VERSION}-web.zip`，解压后在浏览器中打开 `index.html`
-            3. **macOS**: 下载 `.app` 文件直接运行，或下载 `.dmg` 文件安装
-            4. **Windows**: 下载 `.exe` 文件直接运行，或下载 `.msi` 文件安装
-            5. **Linux**: 下载 `.AppImage` 文件直接运行，或下载 `.deb` 文件安装
+            3. **iOS**: 下载 `kiri-${VERSION}-ios.zip`，解压后通过 Xcode 安装到设备（需要开发者证书）
+            4. **macOS**: 下载 `.app` 文件直接运行，或下载 `.dmg` 文件安装
+            5. **Windows**: 下载 `.exe` 文件直接运行，或下载 `.msi` 文件安装
+            6. **Linux**: 下载 `.AppImage` 文件直接运行，或下载 `.deb` 文件安装
             
             ### 📱 系统要求
             - **Android**: 5.0+ (API 21+)
             - **Web**: Chrome 60+, Firefox 55+, Safari 12+, Edge 79+
+            - **iOS**: 12.0+ (需要开发者证书)
             - **macOS**: 10.14+
             - **Windows**: Windows 10+
             - **Linux**: Ubuntu 18.04+
