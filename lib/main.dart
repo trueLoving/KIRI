@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'providers/pomodoro_provider.dart';
+import 'models/pomodoro_session.dart';
 import 'screens/statistics_screen.dart';
 import 'screens/tasks_screen.dart';
 import 'screens/export_screen.dart';
@@ -378,121 +378,288 @@ class _TimerScreenState extends State<TimerScreen>
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: Theme.of(context).cardColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: Text(
-                '设置',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 工作时间设置
-                  _buildTimeSettingItem(
-                    icon: Icons.work_outline_rounded,
-                    title: '工作时间',
-                    value: provider.settings.workDuration,
-                    onChanged: (value) {
-                      setState(() {
-                        // 这里只是UI更新，实际保存会在点击应用时进行
-                      });
-                    },
-                  ),
-                  const Divider(height: 1),
-                  // 休息时间设置
-                  _buildTimeSettingItem(
-                    icon: Icons.coffee_outlined,
-                    title: '休息时间',
-                    value: provider.settings.breakDuration,
-                    onChanged: (value) {
-                      setState(() {
-                        // 这里只是UI更新，实际保存会在点击应用时进行
-                      });
-                    },
-                  ),
-                  const Divider(height: 1),
-                  _buildSettingItem(
-                    icon: Icons.notifications_outlined,
-                    title: '通知',
-                    subtitle: provider.settings.enableNotifications ? '开启' : '关闭',
-                    onTap: () {
-                      setState(() {
-                        // 切换通知设置
-                      });
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).hintColor,
-                  ),
-                  child: const Text('取消'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    // 应用设置并重置计时器
-                    provider.resetTimer();
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('应用'),
-                ),
-              ],
-            );
-          },
-        );
+        return _SettingsDialog(provider: provider);
       },
     );
   }
 
-  Widget _buildSettingItem({
+
+  Widget _buildControlButton({
     required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
+    required VoidCallback onPressed,
+    required Color color,
+    bool isLarge = false,
   }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        icon,
-        color: Theme.of(context).hintColor,
-        size: 24,
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: isLarge ? 80 : 56,
+        height: isLarge ? 80 : 56,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: isLarge ? 12 : 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          color: Colors.white,
+          size: isLarge ? 32 : 24,
+        ),
+      ),
+    );
+  }
+}
+
+// 自定义进度绘制器
+class ProgressPainter extends CustomPainter {
+  final double progress;
+  final bool isWorkTime;
+  final bool isRunning;
+
+  ProgressPainter({
+    required this.progress,
+    required this.isWorkTime,
+    required this.isRunning,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 8;
+    
+    // 背景圆环
+    final backgroundPaint = Paint()
+      ..color = const Color(0xFFE8E8E8)
+      ..strokeWidth = 6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    
+    canvas.drawCircle(center, radius, backgroundPaint);
+    
+    // 进度圆环
+    final progressPaint = Paint()
+      ..color = isWorkTime ? const Color(0xFF4CAF50) : const Color(0xFF2196F3)
+      ..strokeWidth = 6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    
+    final startAngle = -90 * (3.14159 / 180); // 从顶部开始
+    final sweepAngle = 2 * 3.14159 * progress;
+    
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
+  }
+}
+
+// 设置对话框组件
+class _SettingsDialog extends StatefulWidget {
+  final PomodoroProvider provider;
+
+  const _SettingsDialog({required this.provider});
+
+  @override
+  State<_SettingsDialog> createState() => _SettingsDialogState();
+}
+
+class _SettingsDialogState extends State<_SettingsDialog> {
+  late int tempWorkDuration;
+  late int tempBreakDuration;
+  late int tempLongBreakDuration;
+  late int tempSessionsBeforeLongBreak;
+  late bool tempEnableNotifications;
+  late bool tempEnableSound;
+  late String tempTheme;
+  late bool tempEnableHapticFeedback;
+
+  @override
+  void initState() {
+    super.initState();
+    // 初始化临时设置状态
+    tempWorkDuration = widget.provider.settings.workDuration;
+    tempBreakDuration = widget.provider.settings.breakDuration;
+    tempLongBreakDuration = widget.provider.settings.longBreakDuration;
+    tempSessionsBeforeLongBreak = widget.provider.settings.sessionsBeforeLongBreak;
+    tempEnableNotifications = widget.provider.settings.enableNotifications;
+    tempEnableSound = widget.provider.settings.enableSound;
+    tempTheme = widget.provider.settings.theme;
+    tempEnableHapticFeedback = widget.provider.settings.enableHapticFeedback;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
       title: Text(
-        title,
+        '设置',
         style: TextStyle(
-          fontSize: 16,
+          fontSize: 20,
+          fontWeight: FontWeight.w500,
           color: Theme.of(context).primaryColor,
         ),
       ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 14,
-          color: Theme.of(context).hintColor,
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 工作时间设置
+            _buildTimeSettingItem(
+              icon: Icons.work_outline_rounded,
+              title: '工作时间',
+              value: tempWorkDuration,
+              onChanged: (value) {
+                setState(() {
+                  tempWorkDuration = value;
+                });
+              },
+            ),
+            const Divider(height: 1),
+            // 休息时间设置
+            _buildTimeSettingItem(
+              icon: Icons.coffee_outlined,
+              title: '休息时间',
+              value: tempBreakDuration,
+              onChanged: (value) {
+                setState(() {
+                  tempBreakDuration = value;
+                });
+              },
+            ),
+            const Divider(height: 1),
+            // 长休息时间设置
+            _buildTimeSettingItem(
+              icon: Icons.hotel_outlined,
+              title: '长休息时间',
+              value: tempLongBreakDuration,
+              onChanged: (value) {
+                setState(() {
+                  tempLongBreakDuration = value;
+                });
+              },
+            ),
+            const Divider(height: 1),
+            // 长休息前会话数设置
+            _buildTimeSettingItem(
+              icon: Icons.repeat_outlined,
+              title: '长休息前会话数',
+              value: tempSessionsBeforeLongBreak,
+              onChanged: (value) {
+                setState(() {
+                  tempSessionsBeforeLongBreak = value;
+                });
+              },
+            ),
+            const Divider(height: 1),
+            // 通知设置
+            _buildToggleSettingItem(
+              icon: Icons.notifications_outlined,
+              title: '通知',
+              value: tempEnableNotifications,
+              onChanged: (value) {
+                setState(() {
+                  tempEnableNotifications = value;
+                });
+              },
+            ),
+            const Divider(height: 1),
+            // 音效设置
+            _buildToggleSettingItem(
+              icon: Icons.volume_up_outlined,
+              title: '音效',
+              value: tempEnableSound,
+              onChanged: (value) {
+                setState(() {
+                  tempEnableSound = value;
+                });
+              },
+            ),
+            const Divider(height: 1),
+            // 触觉反馈设置
+            _buildToggleSettingItem(
+              icon: Icons.vibration_outlined,
+              title: '触觉反馈',
+              value: tempEnableHapticFeedback,
+              onChanged: (value) {
+                setState(() {
+                  tempEnableHapticFeedback = value;
+                });
+              },
+            ),
+            const Divider(height: 1),
+            // 主题设置
+            _buildThemeSettingItem(
+              icon: Icons.palette_outlined,
+              title: '主题',
+              currentTheme: tempTheme,
+              onChanged: (value) {
+                setState(() {
+                  tempTheme = value;
+                });
+              },
+            ),
+          ],
         ),
       ),
-      onTap: onTap,
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).hintColor,
+          ),
+          child: const Text('取消'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            // 创建新的设置对象
+            final newSettings = PomodoroSettings(
+              workDuration: tempWorkDuration,
+              breakDuration: tempBreakDuration,
+              longBreakDuration: tempLongBreakDuration,
+              sessionsBeforeLongBreak: tempSessionsBeforeLongBreak,
+              enableNotifications: tempEnableNotifications,
+              enableSound: tempEnableSound,
+              selectedSound: widget.provider.settings.selectedSound,
+              enableAutoStart: widget.provider.settings.enableAutoStart,
+              theme: tempTheme,
+              enableHapticFeedback: tempEnableHapticFeedback,
+            );
+            
+            // 保存设置
+            await widget.provider.saveSettings(newSettings);
+            if (context.mounted) {
+              Navigator.of(context).pop();
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('应用'),
+        ),
+      ],
     );
   }
 
@@ -579,85 +746,100 @@ class _TimerScreenState extends State<TimerScreen>
     );
   }
 
-  Widget _buildControlButton({
+  Widget _buildToggleSettingItem({
     required IconData icon,
-    required VoidCallback onPressed,
-    required Color color,
-    bool isLarge = false,
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
   }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: isLarge ? 80 : 56,
-        height: isLarge ? 80 : 56,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: isLarge ? 12 : 8,
-              offset: const Offset(0, 4),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: Theme.of(context).hintColor,
+            size: 24,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).primaryColor,
+              ),
             ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: isLarge ? 32 : 24,
-        ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: Theme.of(context).primaryColor,
+          ),
+        ],
       ),
     );
   }
-}
 
-// 自定义进度绘制器
-class ProgressPainter extends CustomPainter {
-  final double progress;
-  final bool isWorkTime;
-  final bool isRunning;
+  Widget _buildThemeSettingItem({
+    required IconData icon,
+    required String title,
+    required String currentTheme,
+    required ValueChanged<String> onChanged,
+  }) {
+    final themes = [
+      {'key': 'light', 'name': '浅色'},
+      {'key': 'dark', 'name': '深色'},
+      {'key': 'blue', 'name': '蓝色'},
+      {'key': 'green', 'name': '绿色'},
+    ];
 
-  ProgressPainter({
-    required this.progress,
-    required this.isWorkTime,
-    required this.isRunning,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 8;
-    
-    // 背景圆环
-    final backgroundPaint = Paint()
-      ..color = const Color(0xFFE8E8E8)
-      ..strokeWidth = 6
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    
-    canvas.drawCircle(center, radius, backgroundPaint);
-    
-    // 进度圆环
-    final progressPaint = Paint()
-      ..color = isWorkTime ? const Color(0xFF4CAF50) : const Color(0xFF2196F3)
-      ..strokeWidth = 6
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    
-    final startAngle = -90 * (3.14159 / 180); // 从顶部开始
-    final sweepAngle = 2 * 3.14159 * progress;
-    
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      sweepAngle,
-      false,
-      progressPaint,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: Theme.of(context).hintColor,
+            size: 24,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+          ),
+          DropdownButton<String>(
+            value: currentTheme,
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                onChanged(newValue);
+              }
+            },
+            items: themes.map<DropdownMenuItem<String>>((theme) {
+              return DropdownMenuItem<String>(
+                value: theme['key'],
+                child: Text(
+                  theme['name']!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              );
+            }).toList(),
+            underline: Container(),
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: Theme.of(context).hintColor,
+            ),
+          ),
+        ],
+      ),
     );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
   }
 }
