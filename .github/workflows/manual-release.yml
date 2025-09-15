@@ -144,8 +144,8 @@ jobs:
                 # 确保 artifacts 目录存在
                 mkdir -p artifacts
                 cd "${{ matrix.path }}"
-                zip -r "../artifacts/kiri-${VERSION}-web.zip" .
-                cd ..
+                zip -r "../../artifacts/kiri-${VERSION}-web.zip" .
+                cd ../..
                 echo "✅ 创建 Web 压缩包: kiri-${VERSION}-web.zip"
               fi
               ;;
@@ -186,8 +186,8 @@ jobs:
                 # 如果没有找到单个文件，创建整个目录的压缩包
                 if [ -z "$EXE_FILE" ] && [ -z "$MSI_FILE" ]; then
                   cd "${{ matrix.path }}"
-                  zip -r "../artifacts/kiri-${VERSION}-windows.zip" .
-                  cd ..
+                  zip -r "../../artifacts/kiri-${VERSION}-windows.zip" .
+                  cd ../..
                   echo "✅ 创建 Windows 压缩包: kiri-${VERSION}-windows.zip"
                 fi
               fi
@@ -211,8 +211,8 @@ jobs:
                 # 如果没有找到单个文件，创建整个目录的压缩包
                 if [ -z "$APPIMAGE_FILE" ] && [ -z "$DEB_FILE" ]; then
                   cd "${{ matrix.path }}"
-                  tar -czf "../artifacts/kiri-${VERSION}-linux.tar.gz" .
-                  cd ..
+                  tar -czf "../../artifacts/kiri-${VERSION}-linux.tar.gz" .
+                  cd ../..
                   echo "✅ 创建 Linux 压缩包: kiri-${VERSION}-linux.tar.gz"
                 fi
               fi
