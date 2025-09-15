@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
+import 'package:provider/provider.dart';
+import 'providers/pomodoro_provider.dart';
+import 'screens/statistics_screen.dart';
+import 'screens/tasks_screen.dart';
+import 'screens/export_screen.dart';
 
 void main() {
   runApp(const PomodoroApp());
@@ -11,20 +15,64 @@ class PomodoroApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '番茄闹钟',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2C3E50),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-        scaffoldBackgroundColor: const Color(0xFFFAFAFA),
+    return ChangeNotifierProvider(
+      create: (context) => PomodoroProvider()..initialize(),
+      child: Consumer<PomodoroProvider>(
+        builder: (context, provider, child) {
+          return MaterialApp(
+            title: '番茄闹钟',
+            theme: _buildTheme(provider.settings.theme),
+            home: const PomodoroTimer(),
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
-      home: const PomodoroTimer(),
-      debugShowCheckedModeBanner: false,
     );
+  }
+
+  ThemeData _buildTheme(String themeName) {
+    switch (themeName) {
+      case 'dark':
+        return ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2C3E50),
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+          fontFamily: 'Roboto',
+          scaffoldBackgroundColor: const Color(0xFF121212),
+        );
+      case 'blue':
+        return ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2196F3),
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          fontFamily: 'Roboto',
+          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        );
+      case 'green':
+        return ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF4CAF50),
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          fontFamily: 'Roboto',
+          scaffoldBackgroundColor: const Color(0xFFF1F8E9),
+        );
+      default: // light
+        return ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2C3E50),
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          fontFamily: 'Roboto',
+          scaffoldBackgroundColor: const Color(0xFFFAFAFA),
+        );
+    }
   }
 }
 
@@ -35,18 +83,60 @@ class PomodoroTimer extends StatefulWidget {
   State<PomodoroTimer> createState() => _PomodoroTimerState();
 }
 
-class _PomodoroTimerState extends State<PomodoroTimer>
+class _PomodoroTimerState extends State<PomodoroTimer> {
+  int _currentIndex = 0;
+  
+  final List<Widget> _screens = [
+    const TimerScreen(),
+    const TasksScreen(),
+    const StatisticsScreen(),
+    const ExportScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.timer_rounded),
+            label: '计时器',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.task_alt_rounded),
+            label: '任务',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics_rounded),
+            label: '统计',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.file_download_rounded),
+            label: '导出',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TimerScreen extends StatefulWidget {
+  const TimerScreen({super.key});
+
+  @override
+  State<TimerScreen> createState() => _TimerScreenState();
+}
+
+class _TimerScreenState extends State<TimerScreen>
     with TickerProviderStateMixin {
-  Timer? _timer;
-  int _timeLeft = 25 * 60; // 25分钟，以秒为单位
-  bool _isRunning = false;
-  bool _isWorkTime = true; // true为工作时间，false为休息时间
-  int _completedPomodoros = 0;
-  
-  // 可设置的时间（以分钟为单位）
-  int _workDuration = 25; // 工作时间（分钟）
-  int _breakDuration = 5;  // 休息时间（分钟）
-  
   late AnimationController _pulseController;
   late AnimationController _progressController;
   late Animation<double> _pulseAnimation;
@@ -85,316 +175,406 @@ class _PomodoroTimerState extends State<PomodoroTimer>
 
   @override
   void dispose() {
-    _timer?.cancel();
     _pulseController.dispose();
     _progressController.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    if (_isRunning) {
-      _pauseTimer();
-    } else {
-      setState(() {
-        _isRunning = true;
-      });
+  void _startTimer(BuildContext context) {
+    final provider = Provider.of<PomodoroProvider>(context, listen: false);
+    provider.startTimer();
+    
+    if (provider.isRunning) {
       _pulseController.repeat(reverse: true);
       _progressController.repeat();
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        setState(() {
-          if (_timeLeft > 0) {
-            _timeLeft--;
-          } else {
-            _completeSession();
-          }
-        });
-      });
+    } else {
+      _pulseController.stop();
+      _progressController.stop();
     }
   }
 
-  void _pauseTimer() {
-    setState(() {
-      _isRunning = false;
-    });
-    _timer?.cancel();
-    _pulseController.stop();
-    _progressController.stop();
-  }
-
-  void _resetTimer() {
-    setState(() {
-      _isRunning = false;
-      _timeLeft = _isWorkTime ? _workDuration * 60 : _breakDuration * 60;
-    });
-    _timer?.cancel();
+  void _resetTimer(BuildContext context) {
+    final provider = Provider.of<PomodoroProvider>(context, listen: false);
+    provider.resetTimer();
     _pulseController.reset();
     _progressController.reset();
   }
 
-  void _completeSession() {
-    _timer?.cancel();
-    _pulseController.stop();
-    _progressController.stop();
-    
-    // 播放完成音效
-    HapticFeedback.heavyImpact();
-    
-    setState(() {
-      _isRunning = false;
-      if (_isWorkTime) {
-        _completedPomodoros++;
-        _isWorkTime = false;
-        _timeLeft = _breakDuration * 60; // 休息时间
-        _showCompletionDialog('工作完成', '开始休息');
-      } else {
-        _isWorkTime = true;
-        _timeLeft = _workDuration * 60; // 工作时间
-        _showCompletionDialog('休息结束', '开始工作');
-      }
-    });
-  }
-
-  void _showCompletionDialog(String title, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w300,
-              color: Color(0xFF2C3E50),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Text(
-            message,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Color(0xFF7F8C8D),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF95A5A6),
-                    ),
-                    child: const Text('稍后'),
-                  ),
-                ),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _startTimer();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2C3E50),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PomodoroProvider>(
+      builder: (context, provider, child) {
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 60),
+                  
+                  // 状态指示器
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: provider.isWorkTime ? const Color(0xFFE8F5E8) : const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: provider.isWorkTime ? const Color(0xFF4CAF50) : const Color(0xFF2196F3),
+                        width: 1,
                       ),
                     ),
-                    child: const Text('开始'),
+                    child: Text(
+                      provider.isWorkTime ? '专注' : '休息',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: provider.isWorkTime ? const Color(0xFF4CAF50) : const Color(0xFF2196F3),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  
+                  const SizedBox(height: 80),
+                  
+                  // 主计时器
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // 圆形进度指示器
+                          AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: provider.isRunning ? _pulseAnimation.value : 1.0,
+                                child: Container(
+                                  width: 280,
+                                  height: 280,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Theme.of(context).cardColor,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      // 进度环
+                                      AnimatedBuilder(
+                                        animation: _progressAnimation,
+                                        builder: (context, child) {
+                                          return CustomPaint(
+                                            size: const Size(280, 280),
+                                            painter: ProgressPainter(
+                                              progress: provider.getProgress(),
+                                              isWorkTime: provider.isWorkTime,
+                                              isRunning: provider.isRunning,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      // 时间显示
+                                      Center(
+                                        child: Text(
+                                          provider.formatTime(provider.timeLeft),
+                                          style: TextStyle(
+                                            fontSize: 48,
+                                            fontWeight: FontWeight.w300,
+                                            color: Theme.of(context).primaryColor,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          
+                          const SizedBox(height: 80),
+                          
+                          // 控制按钮
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // 重置按钮
+                              _buildControlButton(
+                                icon: Icons.refresh_rounded,
+                                onPressed: () => _resetTimer(context),
+                                color: const Color(0xFF95A5A6),
+                              ),
+                              
+                              // 开始/暂停按钮
+                              _buildControlButton(
+                                icon: provider.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                onPressed: () => _startTimer(context),
+                                color: Theme.of(context).primaryColor,
+                                isLarge: true,
+                              ),
+                              
+                              // 设置按钮
+                              _buildControlButton(
+                                icon: Icons.settings_rounded,
+                                onPressed: () {
+                                  _showSettingsDialog(context);
+                                },
+                                color: const Color(0xFF95A5A6),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // 底部统计
+                  Container(
+                    padding: const EdgeInsets.only(bottom: 40),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.local_fire_department_rounded,
+                          color: Colors.orange.shade400,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${provider.completedPomodoros}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '个番茄',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).hintColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         );
       },
     );
   }
 
-  String _formatTime(int seconds) {
-    int minutes = seconds ~/ 60;
-    int remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  void _showSettingsDialog(BuildContext context) {
+    final provider = Provider.of<PomodoroProvider>(context, listen: false);
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                '设置',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 工作时间设置
+                  _buildTimeSettingItem(
+                    icon: Icons.work_outline_rounded,
+                    title: '工作时间',
+                    value: provider.settings.workDuration,
+                    onChanged: (value) {
+                      setState(() {
+                        // 这里只是UI更新，实际保存会在点击应用时进行
+                      });
+                    },
+                  ),
+                  const Divider(height: 1),
+                  // 休息时间设置
+                  _buildTimeSettingItem(
+                    icon: Icons.coffee_outlined,
+                    title: '休息时间',
+                    value: provider.settings.breakDuration,
+                    onChanged: (value) {
+                      setState(() {
+                        // 这里只是UI更新，实际保存会在点击应用时进行
+                      });
+                    },
+                  ),
+                  const Divider(height: 1),
+                  _buildSettingItem(
+                    icon: Icons.notifications_outlined,
+                    title: '通知',
+                    subtitle: provider.settings.enableNotifications ? '开启' : '关闭',
+                    onTap: () {
+                      setState(() {
+                        // 切换通知设置
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).hintColor,
+                  ),
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // 应用设置并重置计时器
+                    provider.resetTimer();
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('应用'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
-  double _getProgress() {
-    int totalTime = _isWorkTime ? _workDuration * 60 : _breakDuration * 60;
-    return 1.0 - (_timeLeft / totalTime);
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        icon,
+        color: Theme.of(context).hintColor,
+        size: 24,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          color: Theme.of(context).primaryColor,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 14,
+          color: Theme.of(context).hintColor,
+        ),
+      ),
+      onTap: onTap,
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
+  Widget _buildTimeSettingItem({
+    required IconData icon,
+    required String title,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: Theme.of(context).hintColor,
+            size: 24,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+          ),
+          Row(
             children: [
-              const SizedBox(height: 60),
-              
-              // 状态指示器
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: _isWorkTime ? const Color(0xFFE8F5E8) : const Color(0xFFE3F2FD),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: _isWorkTime ? const Color(0xFF4CAF50) : const Color(0xFF2196F3),
-                    width: 1,
+              // 减少按钮
+              GestureDetector(
+                onTap: value > 1 ? () => onChanged(value - 1) : null,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: value > 1 ? Theme.of(context).primaryColor : Theme.of(context).hintColor.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.remove,
+                    color: value > 1 ? Colors.white : Theme.of(context).hintColor,
+                    size: 20,
                   ),
                 ),
+              ),
+              const SizedBox(width: 16),
+              // 时间显示
+              SizedBox(
+                width: 60,
                 child: Text(
-                  _isWorkTime ? '专注' : '休息',
+                  '$value分钟',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: _isWorkTime ? const Color(0xFF4CAF50) : const Color(0xFF2196F3),
+                    color: Theme.of(context).primaryColor,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-              
-              const SizedBox(height: 80),
-              
-              // 主计时器
-              Expanded(
-                child: Center(
-        child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // 圆形进度指示器
-                      AnimatedBuilder(
-                        animation: _pulseAnimation,
-                        builder: (context, child) {
-                          return Transform.scale(
-                            scale: _isRunning ? _pulseAnimation.value : 1.0,
-                            child: Container(
-                              width: 280,
-                              height: 280,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  // 进度环
-                                  AnimatedBuilder(
-                                    animation: _progressAnimation,
-                                    builder: (context, child) {
-                                      return CustomPaint(
-                                        size: const Size(280, 280),
-                                        painter: ProgressPainter(
-                                          progress: _getProgress(),
-                                          isWorkTime: _isWorkTime,
-                                          isRunning: _isRunning,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  // 时间显示
-                                  Center(
-                                    child: Text(
-                                      _formatTime(_timeLeft),
-                                      style: const TextStyle(
-                                        fontSize: 48,
-                                        fontWeight: FontWeight.w300,
-                                        color: Color(0xFF2C3E50),
-                                        letterSpacing: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      
-                      const SizedBox(height: 80),
-                      
-                      // 控制按钮
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // 重置按钮
-                          _buildControlButton(
-                            icon: Icons.refresh_rounded,
-                            onPressed: _resetTimer,
-                            color: const Color(0xFF95A5A6),
-                          ),
-                          
-                          // 开始/暂停按钮
-                          _buildControlButton(
-                            icon: _isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                            onPressed: _startTimer,
-                            color: const Color(0xFF2C3E50),
-                            isLarge: true,
-                          ),
-                          
-                          // 设置按钮
-                          _buildControlButton(
-                            icon: Icons.settings_rounded,
-                            onPressed: () {
-                              _showSettingsDialog();
-                            },
-                            color: const Color(0xFF95A5A6),
-                          ),
-                        ],
-                      ),
-                    ],
+              const SizedBox(width: 16),
+              // 增加按钮
+              GestureDetector(
+                onTap: value < 60 ? () => onChanged(value + 1) : null,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: value < 60 ? Theme.of(context).primaryColor : Theme.of(context).hintColor.withOpacity(0.3),
+                    shape: BoxShape.circle,
                   ),
-                ),
-              ),
-              
-              // 底部统计
-              Container(
-                padding: const EdgeInsets.only(bottom: 40),
-                child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.local_fire_department_rounded,
-                      color: Colors.orange.shade400,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-            Text(
-                      '$_completedPomodoros',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '个番茄',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF7F8C8D),
-                      ),
-                    ),
-                  ],
+                  child: Icon(
+                    Icons.add,
+                    color: value < 60 ? Colors.white : Theme.of(context).hintColor,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -426,209 +606,6 @@ class _PomodoroTimerState extends State<PomodoroTimer>
           color: Colors.white,
           size: isLarge ? 32 : 24,
         ),
-      ),
-    );
-  }
-
-  void _showSettingsDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                '设置',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF2C3E50),
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 工作时间设置
-                  _buildTimeSettingItem(
-                icon: Icons.work_outline_rounded,
-                title: '工作时间',
-                value: _workDuration,
-                onChanged: (value) {
-                  setState(() {
-                    _workDuration = value;
-                  });
-                },
-              ),
-              const Divider(height: 1),
-              // 休息时间设置
-              _buildTimeSettingItem(
-                icon: Icons.coffee_outlined,
-                title: '休息时间',
-                value: _breakDuration,
-                onChanged: (value) {
-                  setState(() {
-                    _breakDuration = value;
-                  });
-                },
-              ),
-              const Divider(height: 1),
-              _buildSettingItem(
-                icon: Icons.notifications_outlined,
-                title: '通知',
-                subtitle: '开启',
-                onTap: () {},
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF95A5A6),
-              ),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // 应用设置并重置计时器
-                this.setState(() {
-                  _timeLeft = _isWorkTime ? _workDuration * 60 : _breakDuration * 60;
-                });
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2C3E50),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('应用'),
-            ),
-          ],
-        );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildSettingItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        icon,
-        color: const Color(0xFF7F8C8D),
-        size: 24,
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          color: Color(0xFF2C3E50),
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(
-          fontSize: 14,
-          color: Color(0xFF7F8C8D),
-        ),
-      ),
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildTimeSettingItem({
-    required IconData icon,
-    required String title,
-    required int value,
-    required ValueChanged<int> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: const Color(0xFF7F8C8D),
-            size: 24,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Color(0xFF2C3E50),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              // 减少按钮
-              GestureDetector(
-                onTap: value > 1 ? () => onChanged(value - 1) : null,
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: value > 1 ? const Color(0xFF2C3E50) : const Color(0xFFE8E8E8),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.remove,
-                    color: value > 1 ? Colors.white : const Color(0xFFBDBDBD),
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // 时间显示
-              Container(
-                width: 60,
-                child: Text(
-                  '$value分钟',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF2C3E50),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // 增加按钮
-              GestureDetector(
-                onTap: value < 60 ? () => onChanged(value + 1) : null,
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: value < 60 ? const Color(0xFF2C3E50) : const Color(0xFFE8E8E8),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.add,
-                    color: value < 60 ? Colors.white : const Color(0xFFBDBDBD),
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

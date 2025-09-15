@@ -34,6 +34,35 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  
+  # 通知功能
+  flutter_local_notifications: ^17.2.3
+  
+  # 数据持久化
+  shared_preferences: ^2.3.2
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+  
+  # 音效和媒体
+  audioplayers: ^6.1.0
+  
+  # 状态管理
+  provider: ^6.1.2
+  
+  # 图表和统计
+  fl_chart: ^0.69.0
+  
+  # 日期时间处理
+  intl: ^0.19.0
+  
+  # 文件操作
+  path_provider: ^2.1.4
+  
+  # 权限管理
+  permission_handler: ^11.3.1
+  
+  # 文件选择
+  file_picker: ^8.0.0+1
 
 dev_dependencies:
   flutter_test:

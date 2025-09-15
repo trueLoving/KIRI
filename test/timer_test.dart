@@ -51,18 +51,27 @@ void main() {
       expect(progress, equals(1.0)); // 完成，进度为1
     });
 
-    test('状态切换逻辑测试', () {
-      // 测试工作状态
-      bool isWorkTime = true;
+    test('工作状态逻辑测试', () {
       int workDuration = 25;
-      int breakDuration = 5;
-      
-      int timeLeft = isWorkTime ? workDuration * 60 : breakDuration * 60;
+      bool isWorkTime = true;
+      int timeLeft;
+      if (isWorkTime) {
+        timeLeft = workDuration * 60;
+      } else {
+        timeLeft = 5 * 60; // 这个分支不会被执行，但避免了死代码警告
+      }
       expect(timeLeft, equals(25 * 60)); // 工作时间
-      
-      // 测试休息状态
-      isWorkTime = false;
-      timeLeft = isWorkTime ? workDuration * 60 : breakDuration * 60;
+    });
+    
+    test('休息状态逻辑测试', () {
+      int breakDuration = 5;
+      bool isWorkTime = false;
+      int timeLeft;
+      if (isWorkTime) {
+        timeLeft = 25 * 60; // 这个分支不会被执行，但避免了死代码警告
+      } else {
+        timeLeft = breakDuration * 60;
+      }
       expect(timeLeft, equals(5 * 60)); // 休息时间
     });
 
@@ -113,27 +122,27 @@ void main() {
   });
 
   group('UI状态测试', () {
-    test('状态指示器测试', () {
-      // 测试工作状态
+    test('工作状态指示器测试', () {
       bool isWorkTime = true;
       String statusText = isWorkTime ? '专注' : '休息';
       expect(statusText, equals('专注'));
-      
-      // 测试休息状态
-      isWorkTime = false;
-      statusText = isWorkTime ? '专注' : '休息';
+    });
+    
+    test('休息状态指示器测试', () {
+      bool isWorkTime = false;
+      String statusText = isWorkTime ? '专注' : '休息';
       expect(statusText, equals('休息'));
     });
 
-    test('按钮状态测试', () {
-      // 测试开始按钮
+    test('开始按钮状态测试', () {
       bool isRunning = false;
       String buttonIcon = isRunning ? 'pause' : 'play';
       expect(buttonIcon, equals('play'));
-      
-      // 测试暂停按钮
-      isRunning = true;
-      buttonIcon = isRunning ? 'pause' : 'play';
+    });
+    
+    test('暂停按钮状态测试', () {
+      bool isRunning = true;
+      String buttonIcon = isRunning ? 'pause' : 'play';
       expect(buttonIcon, equals('pause'));
     });
   });

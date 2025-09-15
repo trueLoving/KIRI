@@ -38,16 +38,21 @@ void main() {
       expect(progress, equals(1.0));
     });
 
-    test('状态切换逻辑测试', () {
+    test('工作状态逻辑测试', () {
       bool isWorkTime = true;
       int workDuration = 25;
       int breakDuration = 5;
       
       int timeLeft = isWorkTime ? workDuration * 60 : breakDuration * 60;
       expect(timeLeft, equals(25 * 60));
+    });
+    
+    test('休息状态逻辑测试', () {
+      bool isWorkTime = false;
+      int workDuration = 25;
+      int breakDuration = 5;
       
-      isWorkTime = false;
-      timeLeft = isWorkTime ? workDuration * 60 : breakDuration * 60;
+      int timeLeft = isWorkTime ? workDuration * 60 : breakDuration * 60;
       expect(timeLeft, equals(5 * 60));
     });
 
@@ -72,23 +77,27 @@ void main() {
   });
 
   group('UI状态测试', () {
-    test('状态指示器测试', () {
+    test('工作状态指示器测试', () {
       bool isWorkTime = true;
       String statusText = isWorkTime ? '专注' : '休息';
       expect(statusText, equals('专注'));
-      
-      isWorkTime = false;
-      statusText = isWorkTime ? '专注' : '休息';
+    });
+    
+    test('休息状态指示器测试', () {
+      bool isWorkTime = false;
+      String statusText = isWorkTime ? '专注' : '休息';
       expect(statusText, equals('休息'));
     });
 
-    test('按钮状态测试', () {
+    test('开始按钮状态测试', () {
       bool isRunning = false;
       String buttonIcon = isRunning ? 'pause' : 'play';
       expect(buttonIcon, equals('play'));
-      
-      isRunning = true;
-      buttonIcon = isRunning ? 'pause' : 'play';
+    });
+    
+    test('暂停按钮状态测试', () {
+      bool isRunning = true;
+      String buttonIcon = isRunning ? 'pause' : 'play';
       expect(buttonIcon, equals('pause'));
     });
   });
