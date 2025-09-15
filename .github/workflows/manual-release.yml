@@ -133,12 +133,16 @@ jobs:
           case "${{ matrix.platform }}" in
             "android")
               if [ -f "${{ matrix.path }}" ]; then
+                # 确保 artifacts 目录存在
+                mkdir -p artifacts
                 cp "${{ matrix.path }}" "artifacts/kiri-${VERSION}.apk"
                 echo "✅ 创建 Android APK: kiri-${VERSION}.apk"
               fi
               ;;
             "web")
               if [ -d "${{ matrix.path }}" ]; then
+                # 确保 artifacts 目录存在
+                mkdir -p artifacts
                 cd "${{ matrix.path }}"
                 zip -r "../artifacts/kiri-${VERSION}-web.zip" .
                 cd ..
@@ -147,6 +151,8 @@ jobs:
               ;;
             "macos")
               if [ -d "${{ matrix.path }}" ]; then
+                # 确保 artifacts 目录存在
+                mkdir -p artifacts
                 # 查找 .app 文件
                 APP_FILE=$(find "${{ matrix.path }}" -name "*.app" | head -1)
                 if [ -n "$APP_FILE" ]; then
@@ -163,6 +169,8 @@ jobs:
               ;;
             "windows")
               if [ -d "${{ matrix.path }}" ]; then
+                # 确保 artifacts 目录存在
+                mkdir -p artifacts
                 # 查找 .exe 文件
                 EXE_FILE=$(find "${{ matrix.path }}" -name "*.exe" | head -1)
                 if [ -n "$EXE_FILE" ]; then
@@ -186,6 +194,8 @@ jobs:
               ;;
             "linux")
               if [ -d "${{ matrix.path }}" ]; then
+                # 确保 artifacts 目录存在
+                mkdir -p artifacts
                 # 查找 .AppImage 文件
                 APPIMAGE_FILE=$(find "${{ matrix.path }}" -name "*.AppImage" | head -1)
                 if [ -n "$APPIMAGE_FILE" ]; then
