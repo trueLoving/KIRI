@@ -4,7 +4,7 @@
 
 ## 项目理念
 
-"刻"代表时间的精确切割，"KIRI"在日语中意为"切割"，体现了禅学中"当下"的概念。这个番茄闹钟应用追求极简、宁静的设计美学，帮助用户在专注与休息之间找到平衡。
+"kiri"在日语中意为"切割"，体现了禅学中"当下"的概念。这个番茄闹钟应用追求极简、宁静的设计美学，帮助用户在专注与休息之间找到平衡。
 
 ## 应用特色
 
@@ -24,6 +24,14 @@
 - 🔄 **自动模式切换** - 工作与休息智能循环
 - 📈 **完成统计** - 追踪完成的番茄数量
 - 🎨 **状态指示** - 清晰的"专注"/"休息"状态显示
+
+### 高级功能
+- 📝 **任务管理** - 创建、编辑、删除任务
+- 📊 **数据统计** - 详细的番茄钟使用统计
+- 📤 **数据导出** - 支持JSON和CSV格式导出
+- 🔔 **智能通知** - 工作时间结束提醒
+- 🎵 **音效反馈** - 可自定义的音效提醒
+- 💾 **数据持久化** - 本地数据库存储所有数据
 
 ### 交互体验
 - 🎯 **简洁控制** - 开始/暂停、重置、设置三个核心按钮
@@ -149,8 +157,20 @@ flutter build linux --release
 
 ```
 lib/
-├── main.dart              # 主应用文件
-└── (其他文件将根据需要添加)
+├── main.dart                    # 主应用文件
+├── models/
+│   └── pomodoro_session.dart    # 番茄钟会话数据模型
+├── providers/
+│   └── pomodoro_provider.dart   # 状态管理提供者
+├── screens/
+│   ├── export_screen.dart       # 数据导出页面
+│   ├── statistics_screen.dart   # 统计页面
+│   └── tasks_screen.dart        # 任务管理页面
+└── services/
+    ├── audio_service.dart       # 音频服务
+    ├── database_service.dart    # 数据库服务
+    ├── export_service.dart      # 导出服务
+    └── notification_service.dart # 通知服务
 
 android/                   # Android平台配置
 ios/                       # iOS平台配置
@@ -165,16 +185,22 @@ linux/                     # Linux平台配置
 ### 代码结构
 - **PomodoroApp** - 主应用组件
 - **PomodoroTimer** - 计时器主界面
+- **PomodoroProvider** - 状态管理提供者
 - **ProgressPainter** - 自定义进度环绘制器
-- **时间管理** - 可配置的工作/休息时间
-- **状态管理** - 计时器状态和动画控制
+- **DatabaseService** - 数据库服务
+- **ExportService** - 数据导出服务
+- **NotificationService** - 通知服务
+- **AudioService** - 音频服务
 
 ### 主要功能实现
 - **计时器逻辑** - 使用Timer.periodic实现精确计时
 - **动画效果** - 脉冲动画和进度动画
 - **自定义绘制** - CustomPainter绘制圆形进度环
 - **状态切换** - 工作/休息模式的智能切换
-- **设置管理** - 可配置的时间参数
+- **数据持久化** - SQLite数据库存储会话记录
+- **数据导出** - 支持JSON和CSV格式导出
+- **任务管理** - 任务创建、编辑、删除功能
+- **统计功能** - 完成番茄数量统计和趋势分析
 
 ### 开发命令
 ```bash
