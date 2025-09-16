@@ -32,10 +32,18 @@ jobs:
             platform: android
             artifact: android-apk
             path: build/app/outputs/flutter-apk/app-release.apk
+          - os: ubuntu-latest
+            platform: web
+            artifact: web-app
+            path: build/web
           - os: macos-latest
             platform: ios
             artifact: ios-app
             path: build/ios/iphoneos/Runner.app
+          - os: macos-latest
+            platform: macos
+            artifact: macos-app
+            path: build/macos/Build/Products/Release
           - os: windows-latest
             platform: windows
             artifact: windows-app
@@ -80,11 +88,17 @@ jobs:
         if: matrix.platform == 'android'
         run: flutter build apk --release
 
+      - name: Build Web
+        if: matrix.platform == 'web'
+        run: flutter build web --release
 
       - name: Build iOS
         if: matrix.platform == 'ios'
         run: flutter build ios --release --no-codesign
 
+      - name: Build macOS
+        if: matrix.platform == 'macos'
+        run: flutter build macos --release
 
       - name: Build Windows
         if: matrix.platform == 'windows'
@@ -134,9 +148,19 @@ jobs:
                 echo "✅ Android APK 构建完成: ${{ matrix.path }}"
               fi
               ;;
+            "web")
+              if [ -d "${{ matrix.path }}" ]; then
+                echo "✅ Web 应用构建完成: ${{ matrix.path }}"
+              fi
+              ;;
             "ios")
               if [ -d "${{ matrix.path }}" ]; then
                 echo "✅ iOS 应用构建完成: ${{ matrix.path }}"
+              fi
+              ;;
+            "macos")
+              if [ -d "${{ matrix.path }}" ]; then
+                echo "✅ macOS 应用构建完成: ${{ matrix.path }}"
               fi
               ;;
             "windows")
@@ -177,7 +201,9 @@ jobs:
           find . -type f -name "*.apk" -o -name "*.app" -o -name "*.exe" -o -name "*.deb" -o -name "*.tar.gz" | head -20
           echo "=== 各平台文件 ==="
           ls -la android-apk/ 2>/dev/null || echo "Android APK 不存在"
+          ls -la web-app/ 2>/dev/null || echo "Web 应用不存在"
           ls -la ios-app/ 2>/dev/null || echo "iOS 应用不存在"
+          ls -la macos-app/ 2>/dev/null || echo "macOS 应用不存在"
           ls -la windows-app/ 2>/dev/null || echo "Windows 应用不存在"
           ls -la linux-app/ 2>/dev/null || echo "Linux 应用不存在"
 
@@ -198,19 +224,25 @@ jobs:
             
             ### 📦 下载
             - **Android APK**: 适用于Android设备
+            - **Web应用**: 适用于Web浏览器
             - **iOS应用**: 适用于iOS设备（需要开发者证书）
+            - **macOS应用**: 适用于macOS系统
             - **Windows应用**: 适用于Windows系统
             - **Linux应用**: 适用于Linux系统
             
             ### 🚀 安装说明
             1. **Android**: 下载 APK 文件并安装
-            2. **iOS**: 下载应用文件，通过 Xcode 安装到设备（需要开发者证书）
-            3. **Windows**: 下载应用文件直接运行
-            4. **Linux**: 下载应用文件直接运行
+            2. **Web**: 下载应用文件，在浏览器中打开
+            3. **iOS**: 下载应用文件，通过 Xcode 安装到设备（需要开发者证书）
+            4. **macOS**: 下载应用文件直接运行
+            5. **Windows**: 下载应用文件直接运行
+            6. **Linux**: 下载应用文件直接运行
             
             ### 📱 系统要求
             - **Android**: 5.0+ (API 21+)
+            - **Web**: Chrome 60+, Firefox 55+, Safari 12+, Edge 79+
             - **iOS**: 12.0+ (需要开发者证书)
+            - **macOS**: 10.14+
             - **Windows**: Windows 10+
             - **Linux**: Ubuntu 18.04+
             
@@ -224,7 +256,9 @@ jobs:
             *"时间不是敌人，而是朋友。每一刻都是新的开始。"*
           files: |
             android-apk/*
+            web-app/*
             ios-app/*
+            macos-app/*
             windows-app/*
             linux-app/*
           draft: false
