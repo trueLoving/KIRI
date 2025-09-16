@@ -32,18 +32,10 @@ jobs:
             platform: android
             artifact: android-apk
             path: build/app/outputs/flutter-apk/app-release.apk
-          - os: ubuntu-latest
-            platform: web
-            artifact: web-app
-            path: build/web
           - os: macos-latest
             platform: ios
             artifact: ios-app
             path: build/ios/iphoneos/Runner.app
-          - os: macos-latest
-            platform: macos
-            artifact: macos-app
-            path: build/macos/Build/Products/Release
           - os: windows-latest
             platform: windows
             artifact: windows-app
@@ -75,6 +67,7 @@ jobs:
 
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
@@ -87,17 +80,11 @@ jobs:
         if: matrix.platform == 'android'
         run: flutter build apk --release
 
-      - name: Build Web
-        if: matrix.platform == 'web'
-        run: flutter build web --release
 
       - name: Build iOS
         if: matrix.platform == 'ios'
         run: flutter build ios --release --no-codesign
 
-      - name: Build macOS
-        if: matrix.platform == 'macos'
-        run: flutter build macos --release
 
       - name: Build Windows
         if: matrix.platform == 'windows'
@@ -108,6 +95,7 @@ jobs:
         run: flutter build linux --release
 
       - name: Check build output exists
+        shell: bash
         run: |
           echo "=== 检查构建输出 ==="
           echo "平台: ${{ matrix.platform }}"
@@ -132,132 +120,42 @@ jobs:
             fi
           fi
 
-      - name: Prepare artifacts with version
+      - name: Prepare artifacts
+        shell: bash
         run: |
-          echo "=== 准备带版本号的制品 ==="
-          VERSION="${{ github.event.inputs.version }}"
-          echo "版本号: $VERSION"
-          
-          # 创建临时目录
-          mkdir -p artifacts
+          echo "=== 准备制品 ==="
+          echo "平台: ${{ matrix.platform }}"
+          echo "构建路径: ${{ matrix.path }}"
           
           # 根据平台处理不同的文件
           case "${{ matrix.platform }}" in
             "android")
               if [ -f "${{ matrix.path }}" ]; then
-                # 确保 artifacts 目录存在
-                mkdir -p artifacts
-                cp "${{ matrix.path }}" "artifacts/kiri-${VERSION}.apk"
-                echo "✅ 创建 Android APK: kiri-${VERSION}.apk"
-              fi
-              ;;
-            "web")
-              if [ -d "${{ matrix.path }}" ]; then
-                # 确保 artifacts 目录存在
-                mkdir -p artifacts
-                # 确保 ../../artifacts 目录存在（在 cd 之前再次确认）
-                mkdir -p ../../artifacts
-                cd "${{ matrix.path }}"
-                zip -r "../../artifacts/kiri-${VERSION}-web.zip" .
-                cd ../..
-                echo "✅ 创建 Web 压缩包: kiri-${VERSION}-web.zip"
+                echo "✅ Android APK 构建完成: ${{ matrix.path }}"
               fi
               ;;
             "ios")
               if [ -d "${{ matrix.path }}" ]; then
-                # 确保 artifacts 目录存在
-                mkdir -p artifacts
-                # 确保 ../../artifacts 目录存在（在 cd 之前再次确认）
-                mkdir -p ../../artifacts
-                # 创建 iOS 应用的压缩包
-                cd "${{ matrix.path }}"
-                zip -r "../../artifacts/kiri-${VERSION}-ios.zip" .
-                cd ../..
-                echo "✅ 创建 iOS 应用: kiri-${VERSION}-ios.zip"
-              fi
-              ;;
-            "macos")
-              if [ -d "${{ matrix.path }}" ]; then
-                # 确保 artifacts 目录存在
-                mkdir -p artifacts
-                # 查找 .app 文件
-                APP_FILE=$(find "${{ matrix.path }}" -name "*.app" | head -1)
-                if [ -n "$APP_FILE" ]; then
-                  cp -r "$APP_FILE" "artifacts/kiri-${VERSION}.app"
-                  echo "✅ 创建 macOS 应用: kiri-${VERSION}.app"
-                fi
-                # 查找 .dmg 文件
-                DMG_FILE=$(find "${{ matrix.path }}" -name "*.dmg" | head -1)
-                if [ -n "$DMG_FILE" ]; then
-                  cp "$DMG_FILE" "artifacts/kiri-${VERSION}.dmg"
-                  echo "✅ 创建 macOS DMG: kiri-${VERSION}.dmg"
-                fi
+                echo "✅ iOS 应用构建完成: ${{ matrix.path }}"
               fi
               ;;
             "windows")
               if [ -d "${{ matrix.path }}" ]; then
-                # 确保 artifacts 目录存在
-                mkdir -p artifacts
-                # 查找 .exe 文件
-                EXE_FILE=$(find "${{ matrix.path }}" -name "*.exe" | head -1)
-                if [ -n "$EXE_FILE" ]; then
-                  cp "$EXE_FILE" "artifacts/kiri-${VERSION}.exe"
-                  echo "✅ 创建 Windows EXE: kiri-${VERSION}.exe"
-                fi
-                # 查找 .msi 文件
-                MSI_FILE=$(find "${{ matrix.path }}" -name "*.msi" | head -1)
-                if [ -n "$MSI_FILE" ]; then
-                  cp "$MSI_FILE" "artifacts/kiri-${VERSION}.msi"
-                  echo "✅ 创建 Windows MSI: kiri-${VERSION}.msi"
-                fi
-                # 如果没有找到单个文件，创建整个目录的压缩包
-                if [ -z "$EXE_FILE" ] && [ -z "$MSI_FILE" ]; then
-                  # 确保 ../../artifacts 目录存在（在 cd 之前再次确认）
-                  mkdir -p ../../artifacts
-                  cd "${{ matrix.path }}"
-                  zip -r "../../artifacts/kiri-${VERSION}-windows.zip" .
-                  cd ../..
-                  echo "✅ 创建 Windows 压缩包: kiri-${VERSION}-windows.zip"
-                fi
+                echo "✅ Windows 应用构建完成: ${{ matrix.path }}"
               fi
               ;;
             "linux")
               if [ -d "${{ matrix.path }}" ]; then
-                # 确保 artifacts 目录存在
-                mkdir -p artifacts
-                # 查找 .AppImage 文件
-                APPIMAGE_FILE=$(find "${{ matrix.path }}" -name "*.AppImage" | head -1)
-                if [ -n "$APPIMAGE_FILE" ]; then
-                  cp "$APPIMAGE_FILE" "artifacts/kiri-${VERSION}.AppImage"
-                  echo "✅ 创建 Linux AppImage: kiri-${VERSION}.AppImage"
-                fi
-                # 查找 .deb 文件
-                DEB_FILE=$(find "${{ matrix.path }}" -name "*.deb" | head -1)
-                if [ -n "$DEB_FILE" ]; then
-                  cp "$DEB_FILE" "artifacts/kiri-${VERSION}.deb"
-                  echo "✅ 创建 Linux DEB: kiri-${VERSION}.deb"
-                fi
-                # 如果没有找到单个文件，创建整个目录的压缩包
-                if [ -z "$APPIMAGE_FILE" ] && [ -z "$DEB_FILE" ]; then
-                  # 确保 artifacts 目录存在（在 cd 之前再次确认）
-                  mkdir -p ../../artifacts
-                  cd "${{ matrix.path }}"
-                  tar -czf "../../artifacts/kiri-${VERSION}-linux.tar.gz" .
-                  cd ../..
-                  echo "✅ 创建 Linux 压缩包: kiri-${VERSION}-linux.tar.gz"
-                fi
+                echo "✅ Linux 应用构建完成: ${{ matrix.path }}"
               fi
               ;;
           esac
-          
-          echo "=== 最终制品列表 ==="
-          ls -la artifacts/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: artifacts/
+          path: ${{ matrix.path }}
           if-no-files-found: warn
 
   # 创建GitHub Release
@@ -273,107 +171,15 @@ jobs:
         uses: actions/download-artifact@v4
 
       - name: List downloaded artifacts
+        shell: bash
         run: |
           echo "=== 下载的 artifacts 结构 ==="
           find . -type f -name "*.apk" -o -name "*.app" -o -name "*.exe" -o -name "*.deb" -o -name "*.tar.gz" | head -20
           echo "=== 各平台文件 ==="
           ls -la android-apk/ 2>/dev/null || echo "Android APK 不存在"
-          ls -la web-app/ 2>/dev/null || echo "Web 应用不存在"
           ls -la ios-app/ 2>/dev/null || echo "iOS 应用不存在"
-          ls -la macos-app/ 2>/dev/null || echo "macOS 应用不存在"
           ls -la windows-app/ 2>/dev/null || echo "Windows 应用不存在"
           ls -la linux-app/ 2>/dev/null || echo "Linux 应用不存在"
-          
-          echo "=== 查找所有可用的应用文件 ==="
-          find . -name "*.app" -o -name "*.dmg" -o -name "*.exe" -o -name "*.msi" -o -name "*.deb" -o -name "*.AppImage" | head -20
-
-      - name: Create dynamic file list
-        id: create-files
-        run: |
-          echo "=== 创建动态文件列表 ==="
-          VERSION="${{ github.event.inputs.version }}"
-          echo "版本号: $VERSION"
-          
-          # 创建文件列表
-          FILE_LIST=""
-          
-          # 查找所有带版本号的文件
-          echo "=== 查找制品文件 ==="
-          
-          # Android APK
-          if [ -f "android-apk/kiri-${VERSION}.apk" ]; then
-            FILE_LIST="$FILE_LIST
-            android-apk/kiri-${VERSION}.apk"
-            echo "✅ 添加 Android APK: kiri-${VERSION}.apk"
-          fi
-          
-          # Web 应用
-          if [ -f "web-app/kiri-${VERSION}-web.zip" ]; then
-            FILE_LIST="$FILE_LIST
-            web-app/kiri-${VERSION}-web.zip"
-            echo "✅ 添加 Web 应用: kiri-${VERSION}-web.zip"
-          fi
-          
-          # iOS 应用
-          if [ -f "ios-app/kiri-${VERSION}-ios.zip" ]; then
-            FILE_LIST="$FILE_LIST
-            ios-app/kiri-${VERSION}-ios.zip"
-            echo "✅ 添加 iOS 应用: kiri-${VERSION}-ios.zip"
-          fi
-          
-          # macOS 应用
-          if [ -f "macos-app/kiri-${VERSION}.app" ]; then
-            FILE_LIST="$FILE_LIST
-            macos-app/kiri-${VERSION}.app"
-            echo "✅ 添加 macOS 应用: kiri-${VERSION}.app"
-          fi
-          if [ -f "macos-app/kiri-${VERSION}.dmg" ]; then
-            FILE_LIST="$FILE_LIST
-            macos-app/kiri-${VERSION}.dmg"
-            echo "✅ 添加 macOS DMG: kiri-${VERSION}.dmg"
-          fi
-          
-          # Windows 应用
-          if [ -f "windows-app/kiri-${VERSION}.exe" ]; then
-            FILE_LIST="$FILE_LIST
-            windows-app/kiri-${VERSION}.exe"
-            echo "✅ 添加 Windows EXE: kiri-${VERSION}.exe"
-          fi
-          if [ -f "windows-app/kiri-${VERSION}.msi" ]; then
-            FILE_LIST="$FILE_LIST
-            windows-app/kiri-${VERSION}.msi"
-            echo "✅ 添加 Windows MSI: kiri-${VERSION}.msi"
-          fi
-          if [ -f "windows-app/kiri-${VERSION}-windows.zip" ]; then
-            FILE_LIST="$FILE_LIST
-            windows-app/kiri-${VERSION}-windows.zip"
-            echo "✅ 添加 Windows 压缩包: kiri-${VERSION}-windows.zip"
-          fi
-          
-          # Linux 应用
-          if [ -f "linux-app/kiri-${VERSION}.AppImage" ]; then
-            FILE_LIST="$FILE_LIST
-            linux-app/kiri-${VERSION}.AppImage"
-            echo "✅ 添加 Linux AppImage: kiri-${VERSION}.AppImage"
-          fi
-          if [ -f "linux-app/kiri-${VERSION}.deb" ]; then
-            FILE_LIST="$FILE_LIST
-            linux-app/kiri-${VERSION}.deb"
-            echo "✅ 添加 Linux DEB: kiri-${VERSION}.deb"
-          fi
-          if [ -f "linux-app/kiri-${VERSION}-linux.tar.gz" ]; then
-            FILE_LIST="$FILE_LIST
-            linux-app/kiri-${VERSION}-linux.tar.gz"
-            echo "✅ 添加 Linux 压缩包: kiri-${VERSION}-linux.tar.gz"
-          fi
-          
-          # 输出文件列表
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$FILE_LIST" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          
-          echo "=== 最终文件列表 ==="
-          echo "$FILE_LIST"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -391,26 +197,20 @@ jobs:
             - 智能状态切换
             
             ### 📦 下载
-            - **Android APK**: `kiri-${VERSION}.apk` - 适用于Android设备
-            - **Web应用**: `kiri-${VERSION}-web.zip` - 包含HTML资源的压缩包
-            - **iOS应用**: `kiri-${VERSION}-ios.zip` - 适用于iOS设备（需要开发者证书）
-            - **macOS应用**: `kiri-${VERSION}.app` 或 `kiri-${VERSION}.dmg` - 适用于macOS系统
-            - **Windows应用**: `kiri-${VERSION}.exe` 或 `kiri-${VERSION}.msi` - 适用于Windows系统
-            - **Linux应用**: `kiri-${VERSION}.AppImage` 或 `kiri-${VERSION}.deb` - 适用于Linux系统
+            - **Android APK**: 适用于Android设备
+            - **iOS应用**: 适用于iOS设备（需要开发者证书）
+            - **Windows应用**: 适用于Windows系统
+            - **Linux应用**: 适用于Linux系统
             
             ### 🚀 安装说明
-            1. **Android**: 下载 `kiri-${VERSION}.apk` 文件并安装
-            2. **Web**: 下载 `kiri-${VERSION}-web.zip`，解压后在浏览器中打开 `index.html`
-            3. **iOS**: 下载 `kiri-${VERSION}-ios.zip`，解压后通过 Xcode 安装到设备（需要开发者证书）
-            4. **macOS**: 下载 `.app` 文件直接运行，或下载 `.dmg` 文件安装
-            5. **Windows**: 下载 `.exe` 文件直接运行，或下载 `.msi` 文件安装
-            6. **Linux**: 下载 `.AppImage` 文件直接运行，或下载 `.deb` 文件安装
+            1. **Android**: 下载 APK 文件并安装
+            2. **iOS**: 下载应用文件，通过 Xcode 安装到设备（需要开发者证书）
+            3. **Windows**: 下载应用文件直接运行
+            4. **Linux**: 下载应用文件直接运行
             
             ### 📱 系统要求
             - **Android**: 5.0+ (API 21+)
-            - **Web**: Chrome 60+, Firefox 55+, Safari 12+, Edge 79+
             - **iOS**: 12.0+ (需要开发者证书)
-            - **macOS**: 10.14+
             - **Windows**: Windows 10+
             - **Linux**: Ubuntu 18.04+
             
@@ -422,7 +222,11 @@ jobs:
             ---
             
             *"时间不是敌人，而是朋友。每一刻都是新的开始。"*
-          files: ${{ steps.create-files.outputs.files }}
+          files: |
+            android-apk/*
+            ios-app/*
+            windows-app/*
+            linux-app/*
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
           fail_on_unmatched_files: false
