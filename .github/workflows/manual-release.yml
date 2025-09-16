@@ -114,11 +114,11 @@ jobs:
           echo "=== 检查构建输出 ==="
           echo "平台: ${{ matrix.platform }}"
           echo "预期路径: ${{ matrix.path }}"
-          if [ -d "${{ matrix.path }}" ]; then
-            echo "✅ 构建输出目录存在"
+          if [ -f "${{ matrix.path }}" ] || [ -d "${{ matrix.path }}" ]; then
+            echo "✅ 构建输出存在"
             ls -la "${{ matrix.path }}"
           else
-            echo "❌ 构建输出目录不存在"
+            echo "❌ 构建输出不存在"
             echo "当前目录结构:"
             find build -type d -name "*" | head -20
             echo "查找可能的输出文件:"
@@ -146,31 +146,43 @@ jobs:
             "android")
               if [ -f "${{ matrix.path }}" ]; then
                 echo "✅ Android APK 构建完成: ${{ matrix.path }}"
+              else
+                echo "❌ Android APK 构建失败: ${{ matrix.path }} 不存在"
               fi
               ;;
             "web")
               if [ -d "${{ matrix.path }}" ]; then
                 echo "✅ Web 应用构建完成: ${{ matrix.path }}"
+              else
+                echo "❌ Web 应用构建失败: ${{ matrix.path }} 不存在"
               fi
               ;;
             "ios")
               if [ -d "${{ matrix.path }}" ]; then
                 echo "✅ iOS 应用构建完成: ${{ matrix.path }}"
+              else
+                echo "❌ iOS 应用构建失败: ${{ matrix.path }} 不存在"
               fi
               ;;
             "macos")
               if [ -d "${{ matrix.path }}" ]; then
                 echo "✅ macOS 应用构建完成: ${{ matrix.path }}"
+              else
+                echo "❌ macOS 应用构建失败: ${{ matrix.path }} 不存在"
               fi
               ;;
             "windows")
               if [ -d "${{ matrix.path }}" ]; then
                 echo "✅ Windows 应用构建完成: ${{ matrix.path }}"
+              else
+                echo "❌ Windows 应用构建失败: ${{ matrix.path }} 不存在"
               fi
               ;;
             "linux")
               if [ -d "${{ matrix.path }}" ]; then
                 echo "✅ Linux 应用构建完成: ${{ matrix.path }}"
+              else
+                echo "❌ Linux 应用构建失败: ${{ matrix.path }} 不存在"
               fi
               ;;
           esac
