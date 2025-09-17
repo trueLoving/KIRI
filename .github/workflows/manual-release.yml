@@ -218,13 +218,87 @@ jobs:
           ls -la macos-app/ 2>/dev/null || echo "macOS 应用不存在"
           ls -la windows-app/ 2>/dev/null || echo "Windows 应用不存在"
           ls -la linux-app/ 2>/dev/null || echo "Linux 应用不存在"
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          echo "=== 准备 Release 文件 ==="
+          VERSION="${{ github.event.inputs.version }}"
+          echo "版本号: $VERSION"
           
-          echo "=== 检查所有下载的 artifacts ==="
-          ls -la
+          # 创建 release 目录
+          mkdir -p release-files
           
-          echo "=== 查找所有可能的文件 ==="
-          find . -name "*.html" -o -name "*.js" -o -name "*.css" | head -10
-          find . -name "*.app" | head -10
+          # Android: 直接复制 APK 文件
+          if [ -f "android-apk/app-release.apk" ]; then
+            cp "android-apk/app-release.apk" "release-files/kiri-${VERSION}.apk"
+            echo "✅ 准备 Android APK: kiri-${VERSION}.apk"
+          fi
+          
+          # Web: 创建压缩包
+          if [ -d "web-app" ]; then
+            cd web-app
+            zip -r "../release-files/kiri-${VERSION}-web.zip" .
+            cd ..
+            echo "✅ 准备 Web 压缩包: kiri-${VERSION}-web.zip"
+          fi
+          
+          # iOS: 创建 IPA 文件（从 .app 目录）
+          if [ -d "ios-app" ]; then
+            # 查找 .app 文件
+            APP_FILE=$(find ios-app -name "*.app" | head -1)
+            if [ -n "$APP_FILE" ]; then
+              # 创建 Payload 目录并复制 .app 文件
+              mkdir -p Payload
+              cp -r "$APP_FILE" Payload/
+              # 创建 IPA 文件
+              zip -r "release-files/kiri-${VERSION}.ipa" Payload/
+              rm -rf Payload
+              echo "✅ 准备 iOS IPA: kiri-${VERSION}.ipa"
+            fi
+          fi
+          
+          # macOS: 创建 DMG 文件（Intel 和 Apple Silicon）
+          if [ -d "macos-app" ]; then
+            # 查找 .app 文件
+            APP_FILE=$(find macos-app -name "*.app" | head -1)
+            if [ -n "$APP_FILE" ]; then
+              # 创建临时 DMG 目录
+              mkdir -p dmg-temp
+              cp -r "$APP_FILE" dmg-temp/
+              
+              # 创建 DMG 文件
+              hdiutil create -volname "kiri-${VERSION}" -srcfolder dmg-temp -ov -format UDZO "release-files/kiri-${VERSION}.dmg" 2>/dev/null || {
+                # 如果 hdiutil 不可用，创建压缩包
+                cd dmg-temp
+                zip -r "../release-files/kiri-${VERSION}-macos.zip" .
+                cd ..
+                echo "✅ 准备 macOS 压缩包: kiri-${VERSION}-macos.zip"
+              }
+              rm -rf dmg-temp
+              echo "✅ 准备 macOS DMG: kiri-${VERSION}.dmg"
+            fi
+          fi
+          
+          # Windows: 直接复制 EXE 文件
+          if [ -d "windows-app" ]; then
+            EXE_FILE=$(find windows-app -name "*.exe" | head -1)
+            if [ -n "$EXE_FILE" ]; then
+              cp "$EXE_FILE" "release-files/kiri-${VERSION}.exe"
+              echo "✅ 准备 Windows EXE: kiri-${VERSION}.exe"
+            fi
+          fi
+          
+          # Linux: 创建压缩包
+          if [ -d "linux-app" ]; then
+            cd linux-app
+            tar -czf "../release-files/kiri-${VERSION}-linux.tar.gz" .
+            cd ..
+            echo "✅ 准备 Linux 压缩包: kiri-${VERSION}-linux.tar.gz"
+          fi
+          
+          echo "=== Release 文件列表 ==="
+          ls -la release-files/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -242,20 +316,20 @@ jobs:
             - 智能状态切换
             
             ### 📦 下载
-            - **Android APK**: 适用于Android设备
-            - **Web应用**: 适用于Web浏览器
-            - **iOS应用**: 适用于iOS设备（需要开发者证书）
-            - **macOS应用**: 适用于macOS系统
-            - **Windows应用**: 适用于Windows系统
-            - **Linux应用**: 适用于Linux系统
+            - **Android APK**: `kiri-${VERSION}.apk` - 适用于Android设备
+            - **Web应用**: `kiri-${VERSION}-web.zip` - 适用于Web浏览器
+            - **iOS应用**: `kiri-${VERSION}.ipa` - 适用于iOS设备（需要开发者证书）
+            - **macOS应用**: `kiri-${VERSION}.dmg` - 适用于macOS系统（Intel和Apple Silicon）
+            - **Windows应用**: `kiri-${VERSION}.exe` - 适用于Windows系统
+            - **Linux应用**: `kiri-${VERSION}-linux.tar.gz` - 适用于Linux系统
             
             ### 🚀 安装说明
-            1. **Android**: 下载 APK 文件并安装
-            2. **Web**: 下载应用文件，在浏览器中打开
-            3. **iOS**: 下载应用文件，通过 Xcode 安装到设备（需要开发者证书）
-            4. **macOS**: 下载应用文件直接运行
-            5. **Windows**: 下载应用文件直接运行
-            6. **Linux**: 下载应用文件直接运行
+            1. **Android**: 下载 `kiri-${VERSION}.apk` 文件并安装
+            2. **Web**: 下载 `kiri-${VERSION}-web.zip`，解压后在浏览器中打开 `index.html`
+            3. **iOS**: 下载 `kiri-${VERSION}.ipa`，通过 Xcode 安装到设备（需要开发者证书）
+            4. **macOS**: 下载 `kiri-${VERSION}.dmg` 文件，双击安装
+            5. **Windows**: 下载 `kiri-${VERSION}.exe` 文件直接运行
+            6. **Linux**: 下载 `kiri-${VERSION}-linux.tar.gz`，解压后运行
             
             ### 📱 系统要求
             - **Android**: 5.0+ (API 21+)
@@ -274,12 +348,7 @@ jobs:
             
             *"时间不是敌人，而是朋友。每一刻都是新的开始。"*
           files: |
-            android-apk/**
-            web-app/**
-            ios-app/**
-            macos-app/**
-            windows-app/**
-            linux-app/**
+            release-files/*
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
           fail_on_unmatched_files: false
