@@ -258,25 +258,16 @@ jobs:
             fi
           fi
           
-          # macOS: 创建 DMG 文件（Intel 和 Apple Silicon）
+          # macOS: 创建压缩包（因为 hdiutil 在 GitHub Actions 中可能不可用）
           if [ -d "macos-app" ]; then
             # 查找 .app 文件
             APP_FILE=$(find macos-app -name "*.app" | head -1)
             if [ -n "$APP_FILE" ]; then
-              # 创建临时 DMG 目录
-              mkdir -p dmg-temp
-              cp -r "$APP_FILE" dmg-temp/
-              
-              # 创建 DMG 文件
-              hdiutil create -volname "kiri-${VERSION}" -srcfolder dmg-temp -ov -format UDZO "release-files/kiri-${VERSION}.dmg" 2>/dev/null || {
-                # 如果 hdiutil 不可用，创建压缩包
-                cd dmg-temp
-                zip -r "../release-files/kiri-${VERSION}-macos.zip" .
-                cd ..
-                echo "✅ 准备 macOS 压缩包: kiri-${VERSION}-macos.zip"
-              }
-              rm -rf dmg-temp
-              echo "✅ 准备 macOS DMG: kiri-${VERSION}.dmg"
+              # 创建压缩包
+              cd macos-app
+              zip -r "../release-files/kiri-${VERSION}-macos.zip" .
+              cd ..
+              echo "✅ 准备 macOS 压缩包: kiri-${VERSION}-macos.zip"
             fi
           fi
           
@@ -319,7 +310,7 @@ jobs:
             - **Android APK**: `kiri-${VERSION}.apk` - 适用于Android设备
             - **Web应用**: `kiri-${VERSION}-web.zip` - 适用于Web浏览器
             - **iOS应用**: `kiri-${VERSION}.ipa` - 适用于iOS设备（需要开发者证书）
-            - **macOS应用**: `kiri-${VERSION}.dmg` - 适用于macOS系统（Intel和Apple Silicon）
+            - **macOS应用**: `kiri-${VERSION}-macos.zip` - 适用于macOS系统（Intel和Apple Silicon）
             - **Windows应用**: `kiri-${VERSION}.exe` - 适用于Windows系统
             - **Linux应用**: `kiri-${VERSION}-linux.tar.gz` - 适用于Linux系统
             
@@ -327,7 +318,7 @@ jobs:
             1. **Android**: 下载 `kiri-${VERSION}.apk` 文件并安装
             2. **Web**: 下载 `kiri-${VERSION}-web.zip`，解压后在浏览器中打开 `index.html`
             3. **iOS**: 下载 `kiri-${VERSION}.ipa`，通过 Xcode 安装到设备（需要开发者证书）
-            4. **macOS**: 下载 `kiri-${VERSION}.dmg` 文件，双击安装
+            4. **macOS**: 下载 `kiri-${VERSION}-macos.zip`，解压后运行
             5. **Windows**: 下载 `kiri-${VERSION}.exe` 文件直接运行
             6. **Linux**: 下载 `kiri-${VERSION}-linux.tar.gz`，解压后运行
             
@@ -348,7 +339,12 @@ jobs:
             
             *"时间不是敌人，而是朋友。每一刻都是新的开始。"*
           files: |
-            release-files/*
+            release-files/*.apk
+            release-files/*.zip
+            release-files/*.ipa
+            release-files/*.dmg
+            release-files/*.exe
+            release-files/*.tar.gz
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
           fail_on_unmatched_files: false
