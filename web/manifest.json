@@ -1,11 +1,11 @@
 {
-    "name": "kiri_flutter",
-    "short_name": "kiri_flutter",
+    "name": "刻",
+    "short_name": "kiri",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "刻 - 专注时间管理应用",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

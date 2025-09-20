@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     
     <application
-        android:label="kiri_flutter"
+        android:label="刻"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
