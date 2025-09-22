@@ -72,6 +72,12 @@ class AudioService {
       await _audioPlayer.play(AssetSource(soundPath));
     } catch (e) {
       print('播放音效失败: $e');
+      // 如果音频文件不存在，使用系统默认音效作为备选
+      try {
+        await _audioPlayer.play(DeviceFileSource('system://notification'));
+      } catch (fallbackError) {
+        print('系统音效播放也失败: $fallbackError');
+      }
     }
   }
 
