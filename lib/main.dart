@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/pomodoro_provider.dart';
-import 'screens/tasks_screen.dart';
 import 'screens/settings_screen.dart';
 
 void main() {
@@ -19,7 +18,7 @@ class PomodoroApp extends StatelessWidget {
         builder: (context, provider, child) {
           return MaterialApp(
             title: '番茄闹钟',
-            theme: _buildTheme(provider.settings.theme),
+            theme: _buildTheme(),
             home: const PomodoroTimer(),
             debugShowCheckedModeBanner: false,
           );
@@ -28,49 +27,16 @@ class PomodoroApp extends StatelessWidget {
     );
   }
 
-  ThemeData _buildTheme(String themeName) {
-    switch (themeName) {
-      case 'dark':
-        return ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2C3E50),
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-          scaffoldBackgroundColor: const Color(0xFF121212),
-        );
-      case 'blue':
-        return ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2196F3),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-        );
-      case 'green':
-        return ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF4CAF50),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-          scaffoldBackgroundColor: const Color(0xFFF1F8E9),
-        );
-      default: // light
-        return ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2C3E50),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-          scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-        );
-    }
+  ThemeData _buildTheme() {
+    return ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF2C3E50),
+        brightness: Brightness.light,
+      ),
+      useMaterial3: true,
+      fontFamily: 'Roboto',
+      scaffoldBackgroundColor: const Color(0xFFFAFAFA),
+    );
   }
 }
 
@@ -86,7 +52,6 @@ class _PomodoroTimerState extends State<PomodoroTimer> {
   
   final List<Widget> _screens = [
     const TimerScreen(),
-    const TasksScreen(),
     const SettingsScreen(),
   ];
 
@@ -106,10 +71,6 @@ class _PomodoroTimerState extends State<PomodoroTimer> {
           BottomNavigationBarItem(
             icon: Icon(Icons.timer_rounded),
             label: '计时器',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.task_alt_rounded),
-            label: '任务',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_rounded),

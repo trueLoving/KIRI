@@ -49,7 +49,6 @@ class ExportService {
         'export_date': DateTime.now().toIso8601String(),
         'version': '1.0.0',
         'settings': provider.settings.toMap(),
-        'tasks': provider.tasks.map((task) => task.toMap()).toList(),
         'statistics': {
           'daily_stats': provider.dailyStats,
           'weekly_stats': provider.weeklyStats,
@@ -122,51 +121,6 @@ class ExportService {
     }
   }
 
-  Future<String?> exportTasksToCSV(PomodoroProvider provider) async {
-    try {
-      // 请求权限
-      final hasPermission = await requestStoragePermission();
-      if (!hasPermission) {
-        throw Exception('没有存储权限');
-      }
-
-      // 获取导出目录
-      final directory = await getExternalStorageDirectory();
-      if (directory == null) {
-        throw Exception('无法获取存储目录');
-      }
-
-      // 生成CSV内容
-      final csvContent = StringBuffer();
-      csvContent.writeln('任务名称,描述,创建时间,完成时间,是否完成,预计番茄数,完成番茄数,分类,优先级');
-      
-      for (final task in provider.tasks) {
-        csvContent.writeln(
-          '${task.name},'
-          '${task.description ?? ""},'
-          '${task.createdAt.toIso8601String()},'
-          '${task.completedAt?.toIso8601String() ?? ""},'
-          '${task.completed ? "是" : "否"},'
-          '${task.estimatedPomodoros},'
-          '${task.completedPomodoros},'
-          '${task.category ?? ""},'
-          '${task.priority}'
-        );
-      }
-
-      // 生成文件名
-      final fileName = 'pomodoro_tasks_${DateTime.now().millisecondsSinceEpoch}.csv';
-      final file = File('${directory.path}/$fileName');
-
-      // 写入文件
-      await file.writeAsString(csvContent.toString());
-
-      return file.path;
-    } catch (e) {
-      print('导出失败: $e');
-      return null;
-    }
-  }
 
   Future<Map<String, dynamic>?> importFromJSON(String filePath) async {
     try {

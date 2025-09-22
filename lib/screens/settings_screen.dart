@@ -23,7 +23,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
   // 导出相关状态
   bool _isExportingJSON = false;
   bool _isExportingCSV = false;
-  bool _isExportingTasksCSV = false;
   List<String> _exportFiles = [];
 
   @override
@@ -98,18 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
                     value: provider.settings.breakDuration,
                     onChanged: (value) => _updateSetting(provider, 'breakDuration', value),
                   ),
-                  _buildTimeSettingItem(
-                    icon: Icons.hotel_outlined,
-                    title: '长休息时间',
-                    value: provider.settings.longBreakDuration,
-                    onChanged: (value) => _updateSetting(provider, 'longBreakDuration', value),
-                  ),
-                  _buildTimeSettingItem(
-                    icon: Icons.repeat_outlined,
-                    title: '长休息前会话数',
-                    value: provider.settings.sessionsBeforeLongBreak,
-                    onChanged: (value) => _updateSetting(provider, 'sessionsBeforeLongBreak', value),
-                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -133,18 +120,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
                     title: '触觉反馈',
                     value: provider.settings.enableHapticFeedback,
                     onChanged: (value) => _updateSetting(provider, 'enableHapticFeedback', value),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildSettingsCard(
-                title: '外观设置',
-                children: [
-                  _buildThemeSettingItem(
-                    icon: Icons.palette_outlined,
-                    title: '主题',
-                    currentTheme: provider.settings.theme,
-                    onChanged: (value) => _updateSetting(provider, 'theme', value),
                   ),
                 ],
               ),
@@ -355,64 +330,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
     );
   }
 
-  // 主题设置项
-  Widget _buildThemeSettingItem({
-    required IconData icon,
-    required String title,
-    required String currentTheme,
-    required ValueChanged<String> onChanged,
-  }) {
-    final themes = [
-      {'key': 'light', 'name': '浅色'},
-      {'key': 'dark', 'name': '深色'},
-      {'key': 'blue', 'name': '蓝色'},
-      {'key': 'green', 'name': '绿色'},
-    ];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, color: Theme.of(context).hintColor, size: 24),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).primaryColor,
-              ),
-            ),
-          ),
-          DropdownButton<String>(
-            value: currentTheme,
-            onChanged: (String? newValue) {
-              if (newValue != null) {
-                onChanged(newValue);
-              }
-            },
-            items: themes.map<DropdownMenuItem<String>>((theme) {
-              return DropdownMenuItem<String>(
-                value: theme['key'],
-                child: Text(
-                  theme['name']!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              );
-            }).toList(),
-            underline: Container(),
-            icon: Icon(
-              Icons.arrow_drop_down,
-              color: Theme.of(context).hintColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // 更新设置
   void _updateSetting(PomodoroProvider provider, String key, dynamic value) {
@@ -420,13 +337,10 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
     final newSettings = PomodoroSettings(
       workDuration: key == 'workDuration' ? value : settings.workDuration,
       breakDuration: key == 'breakDuration' ? value : settings.breakDuration,
-      longBreakDuration: key == 'longBreakDuration' ? value : settings.longBreakDuration,
-      sessionsBeforeLongBreak: key == 'sessionsBeforeLongBreak' ? value : settings.sessionsBeforeLongBreak,
       enableNotifications: key == 'enableNotifications' ? value : settings.enableNotifications,
       enableSound: key == 'enableSound' ? value : settings.enableSound,
       selectedSound: settings.selectedSound,
       enableAutoStart: settings.enableAutoStart,
-      theme: key == 'theme' ? value : settings.theme,
       enableHapticFeedback: key == 'enableHapticFeedback' ? value : settings.enableHapticFeedback,
     );
     provider.saveSettings(newSettings);
@@ -811,7 +725,7 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
           ),
           const SizedBox(height: 16),
           Text(
-            '将您的番茄钟数据导出为文件，包括设置、任务、会话记录和统计信息。',
+            '将您的番茄钟数据导出为文件，包括设置、会话记录和统计信息。',
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).hintColor,
@@ -837,21 +751,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
                   () => _exportToCSV(provider),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildExportButton(
-                  '导出任务CSV',
-                  Icons.task_alt_rounded,
-                  _isExportingTasksCSV,
-                  () => _exportTasksToCSV(provider),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: Container()),
             ],
           ),
         ],
@@ -1129,22 +1028,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
     }
   }
 
-  Future<void> _exportTasksToCSV(PomodoroProvider provider) async {
-    setState(() => _isExportingTasksCSV = true);
-    try {
-      final filePath = await _exportService.exportTasksToCSV(provider);
-      if (filePath != null) {
-        _showSuccessDialog('导出成功', '任务数据已导出到: $filePath');
-        await _loadExportFiles();
-      } else {
-        _showErrorDialog('导出失败', '无法导出数据，请检查存储权限');
-      }
-    } catch (e) {
-      _showErrorDialog('导出失败', e.toString());
-    } finally {
-      setState(() => _isExportingTasksCSV = false);
-    }
-  }
 
   Future<void> _importFromFile() async {
     try {

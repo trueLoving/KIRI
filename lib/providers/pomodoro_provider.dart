@@ -18,15 +18,11 @@ class PomodoroProvider extends ChangeNotifier {
   bool _isRunning = false;
   bool _isWorkTime = true; // true为工作时间，false为休息时间
   int _completedPomodoros = 0;
-  int _sessionsInCurrentCycle = 0;
 
   // 设置
   PomodoroSettings _settings = PomodoroSettings();
   bool _isSettingsLoaded = false;
 
-  // 任务管理
-  List<Task> _tasks = [];
-  Task? _currentTask;
 
   // 统计
   Map<String, int> _dailyStats = {};
@@ -38,10 +34,7 @@ class PomodoroProvider extends ChangeNotifier {
   bool get isRunning => _isRunning;
   bool get isWorkTime => _isWorkTime;
   int get completedPomodoros => _completedPomodoros;
-  int get sessionsInCurrentCycle => _sessionsInCurrentCycle;
   PomodoroSettings get settings => _settings;
-  List<Task> get tasks => _tasks;
-  Task? get currentTask => _currentTask;
   Map<String, int> get dailyStats => _dailyStats;
   Map<String, int> get weeklyStats => _weeklyStats;
   Map<String, int> get monthlyStats => _monthlyStats;
@@ -49,7 +42,6 @@ class PomodoroProvider extends ChangeNotifier {
   // 初始化
   Future<void> initialize() async {
     await _loadSettings();
-    await _loadTasks();
     await _loadStats();
     await _notificationService.initialize();
     await _notificationService.requestPermissions();
@@ -63,13 +55,10 @@ class PomodoroProvider extends ChangeNotifier {
     _settings = PomodoroSettings(
       workDuration: prefs.getInt('workDuration') ?? 25,
       breakDuration: prefs.getInt('breakDuration') ?? 5,
-      longBreakDuration: prefs.getInt('longBreakDuration') ?? 15,
-      sessionsBeforeLongBreak: prefs.getInt('sessionsBeforeLongBreak') ?? 4,
       enableNotifications: prefs.getBool('enableNotifications') ?? true,
       enableSound: prefs.getBool('enableSound') ?? true,
       selectedSound: prefs.getString('selectedSound') ?? 'default',
       enableAutoStart: prefs.getBool('enableAutoStart') ?? false,
-      theme: prefs.getString('theme') ?? 'light',
       enableHapticFeedback: prefs.getBool('enableHapticFeedback') ?? true,
     );
 
@@ -85,13 +74,10 @@ class PomodoroProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('workDuration', _settings.workDuration);
     await prefs.setInt('breakDuration', _settings.breakDuration);
-    await prefs.setInt('longBreakDuration', _settings.longBreakDuration);
-    await prefs.setInt('sessionsBeforeLongBreak', _settings.sessionsBeforeLongBreak);
     await prefs.setBool('enableNotifications', _settings.enableNotifications);
     await prefs.setBool('enableSound', _settings.enableSound);
     await prefs.setString('selectedSound', _settings.selectedSound);
     await prefs.setBool('enableAutoStart', _settings.enableAutoStart);
-    await prefs.setString('theme', _settings.theme);
     await prefs.setBool('enableHapticFeedback', _settings.enableHapticFeedback);
 
     // 更新音效设置
@@ -155,29 +141,14 @@ class PomodoroProvider extends ChangeNotifier {
 
     if (_isWorkTime) {
       _completedPomodoros++;
-      _sessionsInCurrentCycle++;
       _isWorkTime = false;
+      _timeLeft = _settings.breakDuration * 60;
       
-      // 判断是否需要长休息
-      if (_sessionsInCurrentCycle >= _settings.sessionsBeforeLongBreak) {
-        _timeLeft = _settings.longBreakDuration * 60;
-        _sessionsInCurrentCycle = 0;
-        
-        if (_settings.enableNotifications) {
-          _notificationService.showLongBreakNotification();
-        }
-        if (_settings.enableSound) {
-          _audioService.playLongBreakSound();
-        }
-      } else {
-        _timeLeft = _settings.breakDuration * 60;
-        
-        if (_settings.enableNotifications) {
-          _notificationService.showWorkCompleteNotification();
-        }
-        if (_settings.enableSound) {
-          _audioService.playWorkCompleteSound();
-        }
+      if (_settings.enableNotifications) {
+        _notificationService.showWorkCompleteNotification();
+      }
+      if (_settings.enableSound) {
+        _audioService.playWorkCompleteSound();
       }
     } else {
       _isWorkTime = true;
@@ -207,48 +178,13 @@ class PomodoroProvider extends ChangeNotifier {
       endTime: DateTime.now(),
       duration: _isWorkTime ? _settings.workDuration * 60 : _settings.breakDuration * 60,
       isWorkTime: _isWorkTime,
-      taskName: _currentTask?.name,
+      taskName: null,
       completed: true,
     );
 
     await _databaseService.insertSession(session);
   }
 
-  // 任务管理
-  Future<void> _loadTasks() async {
-    _tasks = await _databaseService.getTasks(completed: false);
-    notifyListeners();
-  }
-
-  Future<void> addTask(Task task) async {
-    final id = await _databaseService.insertTask(task);
-    task = task.copyWith(id: id);
-    _tasks.add(task);
-    notifyListeners();
-  }
-
-  Future<void> updateTask(Task task) async {
-    await _databaseService.updateTask(task);
-    final index = _tasks.indexWhere((t) => t.id == task.id);
-    if (index != -1) {
-      _tasks[index] = task;
-    }
-    notifyListeners();
-  }
-
-  Future<void> deleteTask(int taskId) async {
-    await _databaseService.deleteTask(taskId);
-    _tasks.removeWhere((task) => task.id == taskId);
-    if (_currentTask?.id == taskId) {
-      _currentTask = null;
-    }
-    notifyListeners();
-  }
-
-  void setCurrentTask(Task? task) {
-    _currentTask = task;
-    notifyListeners();
-  }
 
   // 统计
   Future<void> _loadStats() async {

@@ -15,7 +15,6 @@ class _ExportScreenState extends State<ExportScreen> {
   final ExportService _exportService = ExportService();
   bool _isExportingJSON = false;
   bool _isExportingCSV = false;
-  bool _isExportingTasksCSV = false;
   List<String> _exportFiles = [];
 
   @override
@@ -93,7 +92,7 @@ class _ExportScreenState extends State<ExportScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            '将您的番茄钟数据导出为文件，包括设置、任务、会话记录和统计信息。',
+            '将您的番茄钟数据导出为文件，包括设置、会话记录和统计信息。',
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).hintColor,
@@ -118,23 +117,6 @@ class _ExportScreenState extends State<ExportScreen> {
                   _isExportingCSV,
                   () => _exportToCSV(provider),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildExportButton(
-                  '导出任务CSV',
-                  Icons.task_alt_rounded,
-                  _isExportingTasksCSV,
-                  () => _exportTasksToCSV(provider),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(), // 占位符
               ),
             ],
           ),
@@ -391,27 +373,6 @@ class _ExportScreenState extends State<ExportScreen> {
     }
   }
 
-  Future<void> _exportTasksToCSV(PomodoroProvider provider) async {
-    setState(() {
-      _isExportingTasksCSV = true;
-    });
-
-    try {
-      final filePath = await _exportService.exportTasksToCSV(provider);
-      if (filePath != null) {
-        _showSuccessDialog('导出成功', '任务数据已导出到: $filePath');
-        await _loadExportFiles();
-      } else {
-        _showErrorDialog('导出失败', '无法导出数据，请检查存储权限');
-      }
-    } catch (e) {
-      _showErrorDialog('导出失败', e.toString());
-    } finally {
-      setState(() {
-        _isExportingTasksCSV = false;
-      });
-    }
-  }
 
   Future<void> _importFromFile() async {
     try {
