@@ -3,11 +3,15 @@
     "short_name": "kiri",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
+    "background_color": "#2C3E50",
+    "theme_color": "#2C3E50",
     "description": "刻 - 专注时间管理应用",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "permissions": [
+        "notifications",
+        "storage"
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",

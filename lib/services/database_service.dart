@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:flutter/foundation.dart';
 import '../models/pomodoro_session.dart';
 
 class DatabaseService {
@@ -16,12 +17,22 @@ class DatabaseService {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'pomodoro.db');
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onCreate,
-    );
+    if (kIsWeb) {
+      // Web平台使用内存数据库
+      return await openDatabase(
+        'pomodoro.db',
+        version: 1,
+        onCreate: _onCreate,
+      );
+    } else {
+      // 移动平台使用文件数据库
+      String path = join(await getDatabasesPath(), 'pomodoro.db');
+      return await openDatabase(
+        path,
+        version: 1,
+        onCreate: _onCreate,
+      );
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {

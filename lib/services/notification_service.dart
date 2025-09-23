@@ -1,5 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart';
+import 'web_permission_service.dart' as web_permissions;
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -31,8 +33,16 @@ class NotificationService {
   }
 
   Future<bool> requestPermissions() async {
-    final status = await Permission.notification.request();
-    return status.isGranted;
+    if (kIsWeb) {
+      // Web平台使用自定义权限管理
+      final webPermissionService = web_permissions.WebPermissionService();
+      final status = await webPermissionService.requestNotificationPermission();
+      return status == web_permissions.PermissionStatus.granted;
+    } else {
+      // 移动平台使用permission_handler
+      final status = await Permission.notification.request();
+      return status.isGranted;
+    }
   }
 
   void _onNotificationTapped(NotificationResponse response) {

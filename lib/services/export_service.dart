@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart';
 import '../providers/pomodoro_provider.dart';
+import 'dart:html' as html;
 
 class ExportService {
   static final ExportService _instance = ExportService._internal();
@@ -10,7 +12,10 @@ class ExportService {
   ExportService._internal();
 
   Future<bool> requestStoragePermission() async {
-    if (Platform.isAndroid) {
+    if (kIsWeb) {
+      // Web平台不需要特殊存储权限
+      return true;
+    } else if (Platform.isAndroid) {
       // Android 13+ 使用新的权限模型
       if (await Permission.manageExternalStorage.isGranted) {
         return true;
@@ -31,94 +36,167 @@ class ExportService {
 
   Future<String?> exportToJSON(PomodoroProvider provider) async {
     try {
-      // 请求权限
-      final hasPermission = await requestStoragePermission();
-      if (!hasPermission) {
-        throw Exception('没有存储权限');
+      if (kIsWeb) {
+        // Web平台使用浏览器下载
+        return await _exportToJSONWeb(provider);
+      } else {
+        // 移动平台使用文件系统
+        return await _exportToJSONMobile(provider);
       }
-
-      // 获取导出目录
-      final directory = await getExternalStorageDirectory();
-      if (directory == null) {
-        throw Exception('无法获取存储目录');
-      }
-
-      // 创建导出数据
-      final exportData = {
-        'app_name': '番茄闹钟',
-        'export_date': DateTime.now().toIso8601String(),
-        'version': '1.0.0',
-        'settings': provider.settings.toMap(),
-        'statistics': {
-          'daily_stats': provider.dailyStats,
-          'weekly_stats': provider.weeklyStats,
-          'monthly_stats': provider.monthlyStats,
-          'completed_pomodoros': provider.completedPomodoros,
-        },
-      };
-
-      // 获取所有会话数据
-      final sessions = await provider.getSessions();
-      exportData['sessions'] = sessions.map((session) => session.toMap()).toList();
-
-      // 生成文件名
-      final fileName = 'pomodoro_export_${DateTime.now().millisecondsSinceEpoch}.json';
-      final file = File('${directory.path}/$fileName');
-
-      // 写入文件
-      await file.writeAsString(jsonEncode(exportData));
-
-      return file.path;
     } catch (e) {
       print('导出失败: $e');
       return null;
     }
   }
 
+  Future<String?> _exportToJSONWeb(PomodoroProvider provider) async {
+    // 创建导出数据
+    final exportData = {
+      'app_name': '番茄闹钟',
+      'export_date': DateTime.now().toIso8601String(),
+      'version': '1.0.0',
+      'settings': provider.settings.toMap(),
+      'statistics': {
+        'daily_stats': provider.dailyStats,
+        'weekly_stats': provider.weeklyStats,
+        'monthly_stats': provider.monthlyStats,
+        'completed_pomodoros': provider.completedPomodoros,
+      },
+    };
+
+    // 获取所有会话数据
+    final sessions = await provider.getSessions();
+    exportData['sessions'] = sessions.map((session) => session.toMap()).toList();
+
+    // 生成JSON字符串
+    final jsonString = jsonEncode(exportData);
+    
+    // 在web平台上触发下载
+    _downloadFile(jsonString, 'pomodoro_export_${DateTime.now().millisecondsSinceEpoch}.json', 'application/json');
+    
+    return 'web_download';
+  }
+
+  Future<String?> _exportToJSONMobile(PomodoroProvider provider) async {
+    // 请求权限
+    final hasPermission = await requestStoragePermission();
+    if (!hasPermission) {
+      throw Exception('没有存储权限');
+    }
+
+    // 获取导出目录
+    final directory = await getExternalStorageDirectory();
+    if (directory == null) {
+      throw Exception('无法获取存储目录');
+    }
+
+    // 创建导出数据
+    final exportData = {
+      'app_name': '番茄闹钟',
+      'export_date': DateTime.now().toIso8601String(),
+      'version': '1.0.0',
+      'settings': provider.settings.toMap(),
+      'statistics': {
+        'daily_stats': provider.dailyStats,
+        'weekly_stats': provider.weeklyStats,
+        'monthly_stats': provider.monthlyStats,
+        'completed_pomodoros': provider.completedPomodoros,
+      },
+    };
+
+    // 获取所有会话数据
+    final sessions = await provider.getSessions();
+    exportData['sessions'] = sessions.map((session) => session.toMap()).toList();
+
+    // 生成文件名
+    final fileName = 'pomodoro_export_${DateTime.now().millisecondsSinceEpoch}.json';
+    final file = File('${directory.path}/$fileName');
+
+    // 写入文件
+    await file.writeAsString(jsonEncode(exportData));
+
+    return file.path;
+  }
+
   Future<String?> exportToCSV(PomodoroProvider provider) async {
     try {
-      // 请求权限
-      final hasPermission = await requestStoragePermission();
-      if (!hasPermission) {
-        throw Exception('没有存储权限');
+      if (kIsWeb) {
+        // Web平台使用浏览器下载
+        return await _exportToCSVWeb(provider);
+      } else {
+        // 移动平台使用文件系统
+        return await _exportToCSVMobile(provider);
       }
-
-      // 获取导出目录
-      final directory = await getExternalStorageDirectory();
-      if (directory == null) {
-        throw Exception('无法获取存储目录');
-      }
-
-      // 获取所有会话数据
-      final sessions = await provider.getSessions();
-
-      // 生成CSV内容
-      final csvContent = StringBuffer();
-      csvContent.writeln('开始时间,结束时间,持续时间(秒),类型,任务名称,是否完成');
-      
-      for (final session in sessions) {
-        csvContent.writeln(
-          '${session.startTime.toIso8601String()},'
-          '${session.endTime?.toIso8601String() ?? ""},'
-          '${session.duration},'
-          '${session.isWorkTime ? "工作" : "休息"},'
-          '${session.taskName ?? ""},'
-          '${session.completed ? "是" : "否"}'
-        );
-      }
-
-      // 生成文件名
-      final fileName = 'pomodoro_sessions_${DateTime.now().millisecondsSinceEpoch}.csv';
-      final file = File('${directory.path}/$fileName');
-
-      // 写入文件
-      await file.writeAsString(csvContent.toString());
-
-      return file.path;
     } catch (e) {
       print('导出失败: $e');
       return null;
     }
+  }
+
+  Future<String?> _exportToCSVWeb(PomodoroProvider provider) async {
+    // 获取所有会话数据
+    final sessions = await provider.getSessions();
+
+    // 生成CSV内容
+    final csvContent = StringBuffer();
+    csvContent.writeln('开始时间,结束时间,持续时间(秒),类型,任务名称,是否完成');
+    
+    for (final session in sessions) {
+      csvContent.writeln(
+        '${session.startTime.toIso8601String()},'
+        '${session.endTime?.toIso8601String() ?? ""},'
+        '${session.duration},'
+        '${session.isWorkTime ? "工作" : "休息"},'
+        '${session.taskName ?? ""},'
+        '${session.completed ? "是" : "否"}'
+      );
+    }
+
+    // 在web平台上触发下载
+    _downloadFile(csvContent.toString(), 'pomodoro_sessions_${DateTime.now().millisecondsSinceEpoch}.csv', 'text/csv');
+    
+    return 'web_download';
+  }
+
+  Future<String?> _exportToCSVMobile(PomodoroProvider provider) async {
+    // 请求权限
+    final hasPermission = await requestStoragePermission();
+    if (!hasPermission) {
+      throw Exception('没有存储权限');
+    }
+
+    // 获取导出目录
+    final directory = await getExternalStorageDirectory();
+    if (directory == null) {
+      throw Exception('无法获取存储目录');
+    }
+
+    // 获取所有会话数据
+    final sessions = await provider.getSessions();
+
+    // 生成CSV内容
+    final csvContent = StringBuffer();
+    csvContent.writeln('开始时间,结束时间,持续时间(秒),类型,任务名称,是否完成');
+    
+    for (final session in sessions) {
+      csvContent.writeln(
+        '${session.startTime.toIso8601String()},'
+        '${session.endTime?.toIso8601String() ?? ""},'
+        '${session.duration},'
+        '${session.isWorkTime ? "工作" : "休息"},'
+        '${session.taskName ?? ""},'
+        '${session.completed ? "是" : "否"}'
+      );
+    }
+
+    // 生成文件名
+    final fileName = 'pomodoro_sessions_${DateTime.now().millisecondsSinceEpoch}.csv';
+    final file = File('${directory.path}/$fileName');
+
+    // 写入文件
+    await file.writeAsString(csvContent.toString());
+
+    return file.path;
   }
 
 
@@ -146,15 +224,20 @@ class ExportService {
 
   Future<List<String>> getExportFiles() async {
     try {
-      final directory = await getExternalStorageDirectory();
-      if (directory == null) return [];
+      if (kIsWeb) {
+        // Web平台无法列出文件，返回空列表
+        return [];
+      } else {
+        final directory = await getExternalStorageDirectory();
+        if (directory == null) return [];
 
-      final files = directory.listSync()
-          .where((file) => file.path.endsWith('.json') || file.path.endsWith('.csv'))
-          .map((file) => file.path)
-          .toList();
+        final files = directory.listSync()
+            .where((file) => file.path.endsWith('.json') || file.path.endsWith('.csv'))
+            .map((file) => file.path)
+            .toList();
 
-      return files;
+        return files;
+      }
     } catch (e) {
       print('获取文件列表失败: $e');
       return [];
@@ -163,15 +246,33 @@ class ExportService {
 
   Future<bool> deleteExportFile(String filePath) async {
     try {
-      final file = File(filePath);
-      if (await file.exists()) {
-        await file.delete();
-        return true;
+      if (kIsWeb) {
+        // Web平台无法删除文件
+        return false;
+      } else {
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete();
+          return true;
+        }
+        return false;
       }
-      return false;
     } catch (e) {
       print('删除文件失败: $e');
       return false;
+    }
+  }
+
+  /// Web平台文件下载功能
+  void _downloadFile(String content, String fileName, String mimeType) {
+    if (kIsWeb) {
+      final bytes = utf8.encode(content);
+      final blob = html.Blob([bytes], mimeType);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
     }
   }
 }
