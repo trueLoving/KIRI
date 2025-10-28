@@ -4,13 +4,15 @@
 
 ## 项目初衷
 
-个人需要一个简洁高效的番茄闹钟应用，在技术选型时考虑了以下方案：
+个人需要一个简洁高效的番茄闹钟应用，使用跨平台技术栈实现全平台覆盖。
 
-- **Flutter** ✅ - 一套代码多平台，性能优秀，开发效率高
-- **React Native + Electron** ❌ - 桌面端需要额外打包，包体积大
-- **React Native + Tauri** ❌ - 学习成本高，生态相对不成熟
+### 技术选型
 
-最终选择 Flutter，实现了 Android、iOS、Web、macOS、Windows、Linux 全平台覆盖。
+- **React Native** ✅ - 移动端开发（Android、iOS）
+- **Electron** ✅ - 桌面端开发（macOS、Windows、Linux）
+- **React** ✅ - Web端开发（浏览器）
+
+通过 React Native + Electron + React 的组合，实现了移动端、桌面端和Web端的完整覆盖。
 
 ## 核心理念
 
@@ -42,24 +44,45 @@
 ## 快速开始
 
 ### 环境要求
-- Flutter 3.0+
-- Dart 3.0+
+- **Node.js** 18+ 
+- **pnpm** 10+ (推荐使用 pnpm 管理 monorepo)
+- **React Native CLI** (移动端开发)
+- **Xcode** (iOS开发，仅 macOS)
+- **Android Studio** (Android开发)
+- **Electron** (自动安装)
 
 ### 安装运行
+
+这是一个 monorepo 项目，使用 pnpm workspace 管理多个应用。
+
 ```bash
-# 安装依赖
-flutter pub get
+# 安装所有依赖
+pnpm install
 
-# 运行应用
-flutter run
+# 运行桌面端 (Electron + React)
+cd apps/desktop
+pnpm dev
 
-# 构建发布
-flutter build apk --release        # Android
-flutter build ios --release        # iOS
-flutter build web --release        # Web
-flutter build macos --release      # macOS
-flutter build windows --release    # Windows
-flutter build linux --release      # Linux
+# 运行移动端 (Expo + React Native)
+cd apps/mobile
+pnpm start
+
+# 从根目录运行（如果配置了脚本）
+pnpm --filter desktop dev
+pnpm --filter mobile start
+```
+
+### 构建发布
+
+```bash
+# 构建桌面端
+cd apps/desktop
+pnpm build
+
+# 构建移动端
+cd apps/mobile
+pnpm android    # Android
+pnpm ios        # iOS
 ```
 
 ## 使用指南
@@ -78,35 +101,61 @@ flutter build linux --release      # Linux
 
 ## 技术栈
 
-- **框架**: Flutter 3.35.3
-- **语言**: Dart 3.0
-- **平台**: Android, iOS, Web, macOS, Windows, Linux
-- **状态管理**: Provider
-- **动画**: AnimationController + CustomPainter
-- **UI组件**: Material Design 3
-- **数据库**: SQLite (sqflite)
-- **通知**: flutter_local_notifications
-- **音频**: audioplayers
+### 核心框架
+- **React** - Web/桌面端 UI 框架
+- **React Native** - 移动端 UI 框架（Android、iOS）
+- **Electron** - 桌面端应用容器（macOS、Windows、Linux）
+- **Expo** - React Native 开发框架
+
+### 桌面端 (apps/desktop)
+- **框架**: Electron + React + Vite
+- **语言**: TypeScript
+- **构建工具**: Vite
+- **UI**: React + CSS
+- **打包**: electron-builder
+
+### 移动端 (apps/mobile)
+- **框架**: Expo (React Native)
+- **语言**: TypeScript
+- **路由**: Expo Router
+- **UI**: React Native 原生组件
+- **导航**: React Navigation
+
+### 共享工具
+- **包管理**: pnpm (workspace monorepo)
+- **状态管理**: Context API / Redux (可选)
+- **数据库**: SQLite / AsyncStorage
+- **通知**: 原生通知 API
+- **动画**: CSS Animation / React Native Reanimated
 
 ## 项目结构
 
+这是一个 monorepo 项目，使用 pnpm workspace 管理。
+
 ```
-lib/
-├── main.dart                    # 主应用文件
-├── models/
-│   └── pomodoro_session.dart    # 数据模型
-├── providers/
-│   └── pomodoro_provider.dart   # 状态管理
-├── screens/
-│   ├── export_screen.dart       # 数据导出
-│   ├── statistics_screen.dart   # 统计页面
-│   └── settings_screen.dart     # 设置页面
-└── services/
-    ├── audio_service.dart       # 音频服务
-    ├── database_service.dart    # 数据库服务
-    ├── export_service.dart      # 导出服务
-    └── notification_service.dart # 通知服务
+KIRI/
+├── apps/
+│   ├── desktop/          # Electron 桌面应用
+│   │   ├── src/          # React + TypeScript 源代码
+│   │   ├── electron/     # Electron 主进程
+│   │   ├── public/       # 静态资源
+│   │   └── package.json
+│   │
+│   └── mobile/           # Expo 移动应用
+│       ├── app/          # Expo Router 路由
+│       ├── components/   # 共享组件
+│       ├── hooks/        # React Hooks
+│       └── package.json
+│
+├── packages/              # 共享包（未来可扩展）
+├── pnpm-workspace.yaml   # pnpm workspace 配置
+└── pnpm-lock.yaml        # 依赖锁定文件
 ```
+
+### 项目说明
+
+- **apps/desktop** - 使用 Electron + React + Vite 构建的桌面应用，支持 macOS、Windows、Linux
+- **apps/mobile** - 使用 Expo + React Native 构建的移动应用，支持 Android 和 iOS
 
 ## 设计理念
 
@@ -125,20 +174,31 @@ lib/
 ## 开发指南
 
 ### 主要功能实现
-- **计时器逻辑** - Timer.periodic 精确计时，简化的工作-休息循环
-- **动画效果** - 脉冲动画和进度动画
-- **自定义绘制** - CustomPainter 绘制圆形进度环
+- **计时器逻辑** - setTimeout/setInterval 精确计时，工作-休息循环
+- **动画效果** - CSS/React Native 动画，流畅的界面过渡
+- **自定义绘制** - SVG/CSS 绘制圆形进度环
 - **状态切换** - 工作/休息模式智能切换
-- **数据持久化** - SQLite 数据库存储
+- **数据持久化** - SQLite/AsyncStorage 本地存储
 - **数据导出** - JSON/CSV 格式导出
 - **极简设计** - 专注于核心功能，移除复杂设置
 
 ### 开发命令
+
+#### 桌面端开发 (apps/desktop)
 ```bash
-flutter run          # 开发模式
-flutter analyze      # 代码分析
-flutter test         # 运行测试
-flutter clean        # 清理构建
+cd apps/desktop
+pnpm dev          # 启动开发服务器
+pnpm build        # 构建生产版本
+pnpm lint         # 代码检查
+```
+
+#### 移动端开发 (apps/mobile)
+```bash
+cd apps/mobile
+pnpm start        # 启动 Expo 开发服务器
+pnpm android      # 在 Android 设备上运行
+pnpm ios          # 在 iOS 设备上运行
+pnpm lint         # 代码检查
 ```
 
 ## 浏览器支持
